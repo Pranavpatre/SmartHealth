@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/bottomnav.tsx","./src/components/offlinebanner.tsx","./src/db/localdb.ts","./src/hooks/usevoiceinput.ts","./src/pages/dailyentrypage.tsx","./src/pages/loginpage.tsx","./src/pages/notificationspage.tsx","./src/pages/stockentrypage.tsx","./src/stores/authstore.ts","./src/sync/syncservice.ts"],"version":"5.9.3"}

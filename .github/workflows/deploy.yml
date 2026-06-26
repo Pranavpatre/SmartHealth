@@ -1,0 +1,62 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Extract version tag
+        id: tag
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build and push API
+        uses: docker/build-push-action@v6
+        with:
+          context: backend/api
+          push: true
+          tags: |
+            ${{ secrets.REGISTRY_URL }}/smarthealth/api:${{ steps.tag.outputs.VERSION }}
+            ${{ secrets.REGISTRY_URL }}/smarthealth/api:latest
+
+      - name: Build and push Dashboard
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend/dashboard
+          push: true
+          tags: |
+            ${{ secrets.REGISTRY_URL }}/smarthealth/dashboard:${{ steps.tag.outputs.VERSION }}
+            ${{ secrets.REGISTRY_URL }}/smarthealth/dashboard:latest
+
+      - name: Build and push Field App
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend/field-app
+          push: true
+          tags: |
+            ${{ secrets.REGISTRY_URL }}/smarthealth/field-app:${{ steps.tag.outputs.VERSION }}
+            ${{ secrets.REGISTRY_URL }}/smarthealth/field-app:latest
+
+      - name: Deploy to Kubernetes
+        run: |
+          echo "${{ secrets.KUBECONFIG }}" > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+          kubectl set image deployment/smarthealth-api api=${{ secrets.REGISTRY_URL }}/smarthealth/api:${{ steps.tag.outputs.VERSION }} -n smarthealth
+          kubectl set image deployment/dashboard dashboard=${{ secrets.REGISTRY_URL }}/smarthealth/dashboard:${{ steps.tag.outputs.VERSION }} -n smarthealth
+          kubectl rollout status deployment/smarthealth-api -n smarthealth --timeout=120s
+          kubectl rollout status deployment/dashboard -n smarthealth --timeout=120s

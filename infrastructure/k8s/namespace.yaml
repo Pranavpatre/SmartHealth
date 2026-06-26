@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: smarthealth
+  labels:
+    app.kubernetes.io/name: smarthealth
+    app.kubernetes.io/part-of: smarthealth-platform

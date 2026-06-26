@@ -1,0 +1,37 @@
+# ---- OS ----
+.DS_Store
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+
+# ---- Node / Frontend ----
+node_modules/
+dist/
+build/
+.next/
+.cache/
+*.local
+
+# ---- Env / secrets ----
+.env
+.env.*
+!.env.example
+*.secret
+secret.yaml
+!secret.yaml.example
+
+# ---- Logs / tmp ----
+*.log
+logs/
+tmp/

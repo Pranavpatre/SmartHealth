@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smarthealth-config
+  namespace: smarthealth
+data:
+  ENVIRONMENT: "production"
+  POSTGRES_DB: "smarthealth"
+  POSTGRES_PORT: "5432"
+  REDIS_PORT: "6379"
+  API_PORT: "8000"
+  WHATSAPP_API_VERSION: "v19.0"
+  ALLOWED_ORIGINS: "https://dashboard.smarthealth.gov.in,https://field.smarthealth.gov.in"
