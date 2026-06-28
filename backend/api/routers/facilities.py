@@ -68,11 +68,18 @@ class FacilityResponse(BaseModel):
     address: str | None
     bed_capacity: int
     created_at: datetime
+    # Coordinates (extracted from the PostGIS geometry) for the dashboard map
+    lat: float | None = None
+    lng: float | None = None
     # Enrichment
     district_name: str | None = None
     latest_health_score: Decimal | None = None
     health_score_status: str | None = None   # GREEN | YELLOW | RED
     active_alert_count: int = 0
+    # Aliases consumed by the dashboard frontend (FacilityMap / cards)
+    health_score: float | None = None
+    traffic_light: str | None = None
+    active_alerts: int = 0
 
 
 class HealthScoreBreakdown(BaseModel):
@@ -205,7 +212,12 @@ async def list_facilities(
     Includes latest health_score and active alert count per facility.
     """
     stmt = (
-        select(Facility, District.name.label("district_name"))
+        select(
+            Facility,
+            District.name.label("district_name"),
+            func.ST_Y(Facility.location).label("lat"),
+            func.ST_X(Facility.location).label("lng"),
+        )
         .join(District, District.id == Facility.district_id)
     )
 
@@ -233,9 +245,11 @@ async def list_facilities(
     rows = (await db.execute(stmt)).all()
 
     results: list[FacilityResponse] = []
-    for facility, district_name in rows:
+    for facility, district_name, lat, lng in rows:
         hs = await _get_latest_health_score(facility.id, db)
         alert_count = await _get_active_alert_count(facility.id, db)
+        score = float(hs.overall_score) if hs and hs.overall_score is not None else None
+        status_light = hs.status if hs else None
         results.append(
             FacilityResponse(
                 id=facility.id,
@@ -246,10 +260,15 @@ async def list_facilities(
                 address=facility.address,
                 bed_capacity=facility.bed_capacity,
                 created_at=facility.created_at,
+                lat=float(lat) if lat is not None else None,
+                lng=float(lng) if lng is not None else None,
                 district_name=district_name,
                 latest_health_score=hs.overall_score if hs else None,
-                health_score_status=hs.status if hs else None,
+                health_score_status=status_light,
                 active_alert_count=alert_count,
+                health_score=score,
+                traffic_light=status_light,
+                active_alerts=alert_count,
             )
         )
 

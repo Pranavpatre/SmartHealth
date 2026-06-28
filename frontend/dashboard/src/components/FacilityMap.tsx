@@ -24,7 +24,9 @@ export default function FacilityMap({ facilities }: Props) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
       />
-      {facilities.map((f) => (
+      {facilities
+        .filter((f) => Number.isFinite(f.lat) && Number.isFinite(f.lng))
+        .map((f) => (
         <CircleMarker
           key={f.id}
           center={[f.lat, f.lng]}
