@@ -86,32 +86,50 @@ async def query_assistant(
     logger = log.bind(user_id=str(current_user.id), language=body.language)
 
     # ------------------------------------------------------------------
-    # Resolve the district for this user
+    # Resolve scope
+    # A district-scoped user drills into their own district. STATE_ADMIN /
+    # SUPERADMIN have no district_id, so they get a national aggregate
+    # instead of a 400 — the SQL district filters simply drop out.
     # ------------------------------------------------------------------
     district_id = current_user.district_id
-    if district_id is None:
+    is_national = district_id is None
+
+    if is_national and current_user.role not in ("STATE_ADMIN", "SUPERADMIN"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User is not assigned to a district.",
         )
 
-    # ------------------------------------------------------------------
-    # 1. District name
-    # ------------------------------------------------------------------
-    district_row = (
-        await db.execute(
-            sqla_text("SELECT name FROM districts WHERE id = :did"),
-            {"did": district_id},
-        )
-    ).mappings().first()
+    if is_national:
+        # Empty fragments → national scope (no district filter).
+        _dcond = ""        # facilities aliased as `f`
+        _dcond2 = ""       # facilities aliased as `f2`
+        _dcond_plain = ""  # tables with a direct district_id column
+        params: dict = {}
+        district_name = "All India"
+    else:
+        _dcond = "AND f.district_id = :did"
+        _dcond2 = "AND f2.district_id = :did"
+        _dcond_plain = "AND district_id = :did"
+        params = {"did": district_id}
 
-    if district_row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"District {district_id} not found.",
-        )
+        # ------------------------------------------------------------------
+        # 1. District name
+        # ------------------------------------------------------------------
+        district_row = (
+            await db.execute(
+                sqla_text("SELECT name FROM districts WHERE id = :did"),
+                {"did": district_id},
+            )
+        ).mappings().first()
 
-    district_name: str = district_row["name"]
+        if district_row is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"District {district_id} not found.",
+            )
+
+        district_name = district_row["name"]
 
     # ------------------------------------------------------------------
     # 2. Facility count
@@ -119,9 +137,9 @@ async def query_assistant(
     facility_count_row = (
         await db.execute(
             sqla_text(
-                "SELECT COUNT(*) AS cnt FROM facilities WHERE district_id = :did"
+                f"SELECT COUNT(*) AS cnt FROM facilities WHERE 1=1 {_dcond_plain}"
             ),
-            {"did": district_id},
+            params,
         )
     ).mappings().first()
     total_facilities: int = int(facility_count_row["cnt"]) if facility_count_row else 0
@@ -132,15 +150,15 @@ async def query_assistant(
     active_alerts_row = (
         await db.execute(
             sqla_text(
-                """
+                f"""
                 SELECT COUNT(*) AS cnt
                 FROM alerts a
                 JOIN facilities f ON f.id = a.facility_id
-                WHERE f.district_id = :did
-                  AND a.status = 'OPEN'
+                WHERE a.status = 'OPEN'
+                  {_dcond}
                 """
             ),
-            {"did": district_id},
+            params,
         )
     ).mappings().first()
     active_alerts: int = int(active_alerts_row["cnt"]) if active_alerts_row else 0
@@ -151,14 +169,14 @@ async def query_assistant(
     pending_plans_row = (
         await db.execute(
             sqla_text(
-                """
+                f"""
                 SELECT COUNT(*) AS cnt
                 FROM redistribution_plans
-                WHERE district_id = :did
-                  AND status = 'PENDING'
+                WHERE status = 'PENDING'
+                  {_dcond_plain}
                 """
             ),
-            {"did": district_id},
+            params,
         )
     ).mappings().first()
     pending_redistribution_plans: int = (
@@ -171,19 +189,19 @@ async def query_assistant(
     avg_score_row = (
         await db.execute(
             sqla_text(
-                """
-                SELECT AVG(latest.overall_score) AS avg_score
-                FROM (
-                    SELECT DISTINCT ON (fhs.facility_id)
-                        fhs.overall_score
-                    FROM facility_health_scores fhs
-                    JOIN facilities f ON f.id = fhs.facility_id
-                    WHERE f.district_id = :did
-                    ORDER BY fhs.facility_id, fhs.time DESC
-                ) AS latest
+                f"""
+                WITH latest AS (
+                    SELECT DISTINCT ON (facility_id) facility_id, overall_score
+                    FROM facility_health_scores
+                    ORDER BY facility_id, time DESC
+                )
+                SELECT AVG(l.overall_score) AS avg_score
+                FROM facilities f
+                JOIN latest l ON l.facility_id = f.id
+                WHERE 1=1 {_dcond}
                 """
             ),
-            {"did": district_id},
+            params,
         )
     ).mappings().first()
     avg_health_score: float = (
@@ -198,33 +216,32 @@ async def query_assistant(
     critical_rows = (
         await db.execute(
             sqla_text(
-                """
+                f"""
+                WITH latest AS (
+                    SELECT DISTINCT ON (facility_id)
+                        facility_id, overall_score, status,
+                        medicine_score, doctor_score, bed_score,
+                        wait_time_score, diagnostics_score
+                    FROM facility_health_scores
+                    ORDER BY facility_id, time DESC
+                )
                 SELECT
-                    f.name          AS facility_name,
-                    fhs.overall_score,
-                    fhs.status
-                FROM (
-                    SELECT DISTINCT ON (fhs2.facility_id)
-                        fhs2.facility_id,
-                        fhs2.overall_score,
-                        fhs2.status,
-                        fhs2.medicine_score,
-                        fhs2.doctor_score,
-                        fhs2.bed_score,
-                        fhs2.wait_time_score,
-                        fhs2.diagnostics_score
-                    FROM facility_health_scores fhs2
-                    JOIN facilities f2 ON f2.id = fhs2.facility_id
-                    WHERE f2.district_id = :did
-                    ORDER BY fhs2.facility_id, fhs2.time DESC
-                ) AS fhs
-                JOIN facilities f ON f.id = fhs.facility_id
-                WHERE fhs.overall_score < 45
-                ORDER BY fhs.overall_score ASC
+                    f.name AS facility_name,
+                    l.overall_score,
+                    l.status,
+                    l.medicine_score,
+                    l.doctor_score,
+                    l.bed_score,
+                    l.wait_time_score,
+                    l.diagnostics_score
+                FROM facilities f
+                JOIN latest l ON l.facility_id = f.id
+                WHERE l.overall_score < 45 {_dcond}
+                ORDER BY l.overall_score ASC
                 LIMIT 10
                 """
             ),
-            {"did": district_id},
+            params,
         )
     ).mappings().all()
 
@@ -255,30 +272,39 @@ async def query_assistant(
 
     # ------------------------------------------------------------------
     # 7. Stockout predictions with horizon <= 3 days (most urgent first)
+    #
+    # ai_predictions holds tens of millions of rows. In district scope the
+    # facility-id join makes this selective and fast; in national scope there
+    # is no facility filter, so a full scan would take ~a minute. National
+    # answers are high-level (covered by avg-score / critical / alert counts),
+    # so we skip the per-prediction detail there.
     # ------------------------------------------------------------------
-    prediction_rows = (
-        await db.execute(
-            sqla_text(
-                """
-                SELECT
-                    f.name              AS facility_name,
-                    m.name              AS medicine_name,
-                    p.predicted_value   AS days_until_stockout,
-                    p.confidence
-                FROM ai_predictions p
-                JOIN facilities f ON f.id = p.facility_id
-                JOIN medicines m  ON m.id = p.medicine_id
-                WHERE f.district_id = :did
-                  AND p.prediction_type = 'STOCKOUT'
-                  AND p.predicted_value <= 3
-                  AND p.predicted_at >= NOW() - INTERVAL '24 hours'
-                ORDER BY p.predicted_value ASC, p.confidence DESC
-                LIMIT 15
-                """
-            ),
-            {"did": district_id},
-        )
-    ).mappings().all()
+    if is_national:
+        prediction_rows = []
+    else:
+        prediction_rows = (
+            await db.execute(
+                sqla_text(
+                    f"""
+                    SELECT
+                        f.name              AS facility_name,
+                        m.name              AS medicine_name,
+                        p.predicted_value   AS days_until_stockout,
+                        p.confidence
+                    FROM ai_predictions p
+                    JOIN facilities f ON f.id = p.facility_id
+                    JOIN medicines m  ON m.id = p.medicine_id
+                    WHERE p.prediction_type = 'STOCKOUT'
+                      AND p.predicted_value <= 3
+                      AND p.predicted_at >= NOW() - INTERVAL '24 hours'
+                      {_dcond}
+                    ORDER BY p.predicted_value ASC, p.confidence DESC
+                    LIMIT 15
+                    """
+                ),
+                params,
+            )
+        ).mappings().all()
 
     recent_predictions: list[dict] = [
         {
@@ -304,18 +330,18 @@ async def query_assistant(
     risk_rows = (
         await db.execute(
             sqla_text(
-                """
+                f"""
                 SELECT DISTINCT a.title
                 FROM alerts a
                 JOIN facilities f ON f.id = a.facility_id
-                WHERE f.district_id = :did
-                  AND a.status = 'OPEN'
+                WHERE a.status = 'OPEN'
                   AND a.severity = 'CRITICAL'
+                  {_dcond}
                 ORDER BY a.title
                 LIMIT 5
                 """
             ),
-            {"did": district_id},
+            params,
         )
     ).mappings().all()
 

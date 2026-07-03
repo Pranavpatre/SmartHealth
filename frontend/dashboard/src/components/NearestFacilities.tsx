@@ -6,6 +6,16 @@ const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
 
 const DOT: Record<string, string> = { GREEN: '🟢', YELLOW: '🟡', RED: '🔴' }
 
+// Keyless quick-pick locations — work without device GPS or a Maps key.
+const PRESETS: { name: string; lat: number; lng: number }[] = [
+  { name: 'Pune', lat: 18.5204, lng: 73.8567 },
+  { name: 'Mumbai', lat: 19.076, lng: 72.8777 },
+  { name: 'Delhi', lat: 28.6139, lng: 77.209 },
+  { name: 'Bengaluru', lat: 12.9716, lng: 77.5946 },
+  { name: 'Kolkata', lat: 22.5726, lng: 88.3639 },
+  { name: 'Chennai', lat: 13.0827, lng: 80.2707 },
+]
+
 // Load the Google Maps JS SDK (Places) once.
 function loadGoogleMaps(key: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -33,6 +43,7 @@ export default function NearestFacilities() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [origin, setOrigin] = useState<string | null>(null)
+  const [manual, setManual] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   const search = async (lat: number, lng: number, label: string) => {
@@ -52,9 +63,23 @@ export default function NearestFacilities() {
     setLoading(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => search(pos.coords.latitude, pos.coords.longitude, 'your current location'),
-      (e) => { setError(e.message || 'Location permission denied.'); setLoading(false) },
+      (e) => {
+        // POSITION_UNAVAILABLE (2) is common on desktops without Location Services.
+        const msg =
+          e.code === e.POSITION_UNAVAILABLE
+            ? 'Could not get a location fix (enable macOS Location Services, or pick a city / enter coordinates below).'
+            : e.message || 'Location permission denied.'
+        setError(msg)
+        setLoading(false)
+      },
       { enableHighAccuracy: true, timeout: 10000 },
     )
+  }
+
+  const submitManual = () => {
+    const m = manual.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/)
+    if (!m) { setError('Enter coordinates as "lat, lng" — e.g. 18.52, 73.85'); return }
+    search(parseFloat(m[1]), parseFloat(m[2]), `${m[1]}, ${m[2]}`)
   }
 
   // Google Places Autocomplete on the address input (only when a key is configured).
@@ -105,6 +130,36 @@ export default function NearestFacilities() {
           className="bg-teal-600 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors whitespace-nowrap"
         >
           📍 Use my location
+        </button>
+      </div>
+
+      {/* Keyless fallbacks — no GPS or Maps key needed */}
+      <div className="flex flex-wrap items-center gap-1.5 mb-3">
+        <span className="text-xs text-gray-400 mr-1">Quick pick:</span>
+        {PRESETS.map((p) => (
+          <button
+            key={p.name}
+            onClick={() => search(p.lat, p.lng, p.name)}
+            className="text-xs border border-gray-200 rounded-full px-2.5 py-1 text-gray-600 hover:bg-teal-50 hover:border-teal-300 transition-colors"
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-2 mb-3">
+        <input
+          value={manual}
+          onChange={(e) => setManual(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && submitManual()}
+          placeholder="Or enter coordinates: lat, lng"
+          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
+        />
+        <button
+          onClick={submitManual}
+          className="border border-gray-200 text-gray-600 text-sm py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          Go
         </button>
       </div>
 
