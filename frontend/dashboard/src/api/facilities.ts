@@ -23,6 +23,8 @@ export interface FacilityDetail extends Facility {
   real_district_ipd_annual?: number | null
   real_district_ipd_monthly_avg?: number | null
   real_district_stockout_rate?: number | null
+  real_district_fully_immunized_annual?: number | null
+  real_district_institutional_deliveries_annual?: number | null
   real_district_hmis_period?: string | null
 }
 

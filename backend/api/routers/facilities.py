@@ -137,6 +137,8 @@ class FacilityDetailResponse(FacilityResponse):
     real_district_ipd_annual: int | None = None
     real_district_ipd_monthly_avg: float | None = None
     real_district_stockout_rate: float | None = None
+    real_district_fully_immunized_annual: int | None = None
+    real_district_institutional_deliveries_annual: int | None = None
     real_district_hmis_period: str | None = None
 
 
@@ -729,6 +731,8 @@ async def get_facility(
     real_ipd_annual: int | None = None
     real_ipd_monthly: float | None = None
     real_stockout_rate: float | None = None
+    real_fully_immunized: int | None = None
+    real_institutional_deliveries: int | None = None
     real_hmis_period: str | None = None
     if district_row:
         metric_rows = (
@@ -752,6 +756,12 @@ async def get_facility(
             elif r.metric == "stockout_rate":
                 # rate-type metric — monthly_avg is the meaningful figure
                 real_stockout_rate = float(r.monthly_avg) if r.monthly_avg is not None else None
+                real_hmis_period = real_hmis_period or r.period
+            elif r.metric == "fully_immunized":
+                real_fully_immunized = int(r.annual_value) if r.annual_value is not None else None
+                real_hmis_period = real_hmis_period or r.period
+            elif r.metric == "institutional_deliveries":
+                real_institutional_deliveries = int(r.annual_value) if r.annual_value is not None else None
                 real_hmis_period = real_hmis_period or r.period
 
     # ── Stock summary (per active medicine) ───────────────────────────────
@@ -842,6 +852,8 @@ async def get_facility(
         real_district_ipd_annual=real_ipd_annual,
         real_district_ipd_monthly_avg=real_ipd_monthly,
         real_district_stockout_rate=real_stockout_rate,
+        real_district_fully_immunized_annual=real_fully_immunized,
+        real_district_institutional_deliveries_annual=real_institutional_deliveries,
         real_district_hmis_period=real_hmis_period,
     )
 

@@ -220,7 +220,9 @@ export default function FacilityDetailPage() {
       {/* Real district HMIS metrics (data.gov.in) */}
       {(facility.real_district_opd_annual != null ||
         facility.real_district_ipd_annual != null ||
-        facility.real_district_stockout_rate != null) && (
+        facility.real_district_stockout_rate != null ||
+        facility.real_district_fully_immunized_annual != null ||
+        facility.real_district_institutional_deliveries_annual != null) && (
         <div className="bg-teal-50 rounded-xl border border-teal-200 p-4">
           <p className="text-xs font-medium text-teal-700 uppercase tracking-wide mb-2">
             Real district data — HMIS {facility.real_district_hmis_period || facility.real_district_opd_period} · {facility.district_name} district (data.gov.in)
@@ -240,6 +242,18 @@ export default function FacilityDetailPage() {
                   {facility.real_district_ipd_monthly_avg != null &&
                     ` · ~${Math.round(facility.real_district_ipd_monthly_avg).toLocaleString()}/mo`}
                 </p>
+              </div>
+            )}
+            {facility.real_district_institutional_deliveries_annual != null && (
+              <div>
+                <p className="text-xl font-bold text-teal-900">{facility.real_district_institutional_deliveries_annual.toLocaleString()}</p>
+                <p className="text-xs text-teal-700">Institutional deliveries / yr (public)</p>
+              </div>
+            )}
+            {facility.real_district_fully_immunized_annual != null && (
+              <div>
+                <p className="text-xl font-bold text-teal-900">{facility.real_district_fully_immunized_annual.toLocaleString()}</p>
+                <p className="text-xs text-teal-700">Children fully immunised / yr</p>
               </div>
             )}
             {facility.real_district_stockout_rate != null && (

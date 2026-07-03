@@ -58,6 +58,20 @@ METRICS: dict[str, list[str]] = {
         "Health Facility Services/Patient Services/Stock out rate of essential Drugs",
         "Stock out rate of essential Drugs",
     ],
+    # Immunisation: prefer "fully immunised", fall back to Measles-1 / Penta-3 as
+    # coverage proxies for states whose schema lacks the composite indicator.
+    "fully_immunized": [
+        "Total number of children (12 to 23 months old) fully immunised (BCG+DPT123+OPV123/Pentavalent123+Measles) during the month (sum of items 10.3.1.a and 10.3.1.b)",
+        "Total number of children (12 to 23 months old) fully immunised (BCG+DPT123+OPV123/Pentavalent123+Measles)",
+        "Number of Infants (0 to 11 months old) received Measles immunisation (First Dose)",
+        "Number of Infants (0 to 11 months old) received Pentavalent3 immunisation",
+    ],
+    # Maternal: institutional deliveries at PUBLIC institutions (= our PHC/CHC scope).
+    "institutional_deliveries": [
+        "Deliveries conducted at Public Institutions (Including C-Sections)",
+        "Deliveries Conducted at Public Institutions",
+        "Number of Institutional deliveries conducted at Public Institutions",
+    ],
 }
 
 
