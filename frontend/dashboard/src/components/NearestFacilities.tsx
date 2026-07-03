@@ -64,15 +64,18 @@ export default function NearestFacilities() {
     navigator.geolocation.getCurrentPosition(
       (pos) => search(pos.coords.latitude, pos.coords.longitude, 'your current location'),
       (e) => {
-        // POSITION_UNAVAILABLE (2) is common on desktops without Location Services.
+        // POSITION_UNAVAILABLE (2) on desktops usually means the high-accuracy
+        // fix failed — fall back to a coarse, cached lookup before giving up.
         const msg =
           e.code === e.POSITION_UNAVAILABLE
-            ? 'Could not get a location fix (enable macOS Location Services, or pick a city / enter coordinates below).'
+            ? 'Could not get a location fix — pick a city or enter coordinates below.'
             : e.message || 'Location permission denied.'
         setError(msg)
         setLoading(false)
       },
-      { enableHighAccuracy: true, timeout: 10000 },
+      // Coarse + cached: works on desktops without GPS (mirrors how most sites
+      // request location). High-accuracy here caused POSITION_UNAVAILABLE.
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 },
     )
   }
 
