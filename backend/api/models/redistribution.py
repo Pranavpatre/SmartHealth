@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -25,7 +25,14 @@ class RedistributionPlan(Base):
         DateTime(timezone=True), nullable=True
     )
     # Matches transfer_status ENUM: PENDING | APPROVED | DEFERRED | IN_TRANSIT | COMPLETED | CANCELLED
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
+    status: Mapped[str] = mapped_column(
+        Enum(
+            "PENDING", "APPROVED", "DEFERRED", "IN_TRANSIT", "COMPLETED", "CANCELLED",
+            name="transfer_status", create_type=False,
+        ),
+        nullable=False,
+        default="PENDING",
+    )
     # Estimated INR savings — NUMERIC(12,2) in schema
     total_savings: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -61,7 +68,14 @@ class RedistributionItem(Base):
     estimated_cost: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
     estimated_saving: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
     # Matches transfer_status ENUM
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
+    status: Mapped[str] = mapped_column(
+        Enum(
+            "PENDING", "APPROVED", "DEFERRED", "IN_TRANSIT", "COMPLETED", "CANCELLED",
+            name="transfer_status", create_type=False,
+        ),
+        nullable=False,
+        default="PENDING",
+    )
     trigger_prediction: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("ai_predictions.id"), nullable=True
     )

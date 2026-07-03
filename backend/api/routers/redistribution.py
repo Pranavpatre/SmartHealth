@@ -99,13 +99,19 @@ def _traffic_light(score: Optional[Decimal]) -> str:
 
 async def _build_plan_response(
     plan: RedistributionPlan,
+    items: list[RedistributionItem],
     db: AsyncSession,
 ) -> RedistributionPlanResponse:
-    """Enrich a plan with facility names and medicine names for response."""
+    """Enrich a plan with facility names and medicine names for response.
+
+    ``items`` is passed in explicitly (already loaded within the async session)
+    rather than read from ``plan.items`` — touching the lazy relationship on an
+    AsyncSession triggers ``MissingGreenlet``.
+    """
     # Collect IDs to look up
     facility_ids: set[uuid.UUID] = set()
     medicine_ids: set[int] = set()
-    for item in plan.items:
+    for item in items:
         facility_ids.add(item.from_facility)
         facility_ids.add(item.to_facility)
         if item.medicine_id is not None:
@@ -128,7 +134,7 @@ async def _build_plan_response(
         med_map = {row.id: row.name for row in result}
 
     items_out: list[LineItemResponse] = []
-    for item in plan.items:
+    for item in items:
         items_out.append(
             LineItemResponse(
                 id=item.id,
@@ -166,7 +172,7 @@ async def _load_plan_or_404(
     plan_id: uuid.UUID,
     district_id: int,
     db: AsyncSession,
-) -> RedistributionPlan:
+) -> tuple[RedistributionPlan, list[RedistributionItem]]:
     result = await db.execute(
         select(RedistributionPlan).where(
             RedistributionPlan.id == plan_id,
@@ -179,12 +185,12 @@ async def _load_plan_or_404(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Redistribution plan {plan_id} not found",
         )
-    # Eagerly load items
+    # Load items explicitly (avoid touching the lazy relationship on AsyncSession)
     items_result = await db.execute(
         select(RedistributionItem).where(RedistributionItem.plan_id == plan_id)
     )
-    plan.items = list(items_result.scalars().all())
-    return plan
+    items = list(items_result.scalars().all())
+    return plan, items
 
 
 # ---------------------------------------------------------------------------
@@ -235,8 +241,8 @@ async def list_plans(
         items_result = await db.execute(
             select(RedistributionItem).where(RedistributionItem.plan_id == plan.id)
         )
-        plan.items = list(items_result.scalars().all())
-        plan_responses.append(await _build_plan_response(plan, db))
+        items = list(items_result.scalars().all())
+        plan_responses.append(await _build_plan_response(plan, items, db))
 
     return {
         "total": total,
@@ -431,9 +437,9 @@ async def create_plan(
     items_result = await db.execute(
         select(RedistributionItem).where(RedistributionItem.plan_id == db_plan.id)
     )
-    db_plan.items = list(items_result.scalars().all())
+    items = list(items_result.scalars().all())
 
-    return await _build_plan_response(db_plan, db)
+    return await _build_plan_response(db_plan, items, db)
 
 
 @router.get("/plans/{plan_id}", response_model=RedistributionPlanResponse)
@@ -449,8 +455,8 @@ async def get_plan(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User has no associated district",
         )
-    plan = await _load_plan_or_404(plan_id, district_id, db)
-    return await _build_plan_response(plan, db)
+    plan, items = await _load_plan_or_404(plan_id, district_id, db)
+    return await _build_plan_response(plan, items, db)
 
 
 @router.post("/plans/{plan_id}/approve", response_model=RedistributionPlanResponse)
@@ -475,7 +481,7 @@ async def approve_plan(
             detail="User has no associated district",
         )
 
-    plan = await _load_plan_or_404(plan_id, district_id, db)
+    plan, _items = await _load_plan_or_404(plan_id, district_id, db)
 
     if plan.status not in ("PENDING", "DEFERRED"):
         raise HTTPException(
@@ -501,12 +507,12 @@ async def approve_plan(
     items_result = await db.execute(
         select(RedistributionItem).where(RedistributionItem.plan_id == plan_id)
     )
-    plan.items = list(items_result.scalars().all())
+    items = list(items_result.scalars().all())
 
     # Resolve OPEN alerts linked to predictions that triggered these transfers
     trigger_pred_ids = [
         item.trigger_prediction
-        for item in plan.items
+        for item in items
         if item.trigger_prediction is not None
     ]
     if trigger_pred_ids:
@@ -545,7 +551,7 @@ async def approve_plan(
     except Exception as exc:
         log.warning("ws_broadcast_failed", event="plan_approved", error=str(exc))
 
-    return await _build_plan_response(plan, db)
+    return await _build_plan_response(plan, items, db)
 
 
 @router.post("/plans/{plan_id}/defer", response_model=RedistributionPlanResponse)
@@ -563,7 +569,7 @@ async def defer_plan(
             detail="User has no associated district",
         )
 
-    plan = await _load_plan_or_404(plan_id, district_id, db)
+    plan, items = await _load_plan_or_404(plan_id, district_id, db)
 
     if plan.status not in ("PENDING",):
         raise HTTPException(
@@ -577,4 +583,4 @@ async def defer_plan(
     plan.notes = f"deferred_reason={body.reason}" + (f"; {existing_notes}" if existing_notes else "")
 
     await db.flush()
-    return await _build_plan_response(plan, db)
+    return await _build_plan_response(plan, items, db)
