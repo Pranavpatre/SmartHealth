@@ -403,6 +403,145 @@ def run_single_facility_prediction(self, facility_id: str, medicine_id: int) -> 
 
 
 # ---------------------------------------------------------------------------
+# Retention / prune
+# ---------------------------------------------------------------------------
+
+@celery_app.task(
+    name="tasks.prediction_tasks.prune_ai_predictions",
+    bind=True,
+    max_retries=2,
+    default_retry_delay=120,
+)
+def prune_ai_predictions(
+    self,
+    retention_hours: int | None = None,
+    batch_size: int = 50_000,
+    max_batches: int = 2_000,
+) -> dict:
+    """
+    Cap ai_predictions growth.
+
+    The 15-minute district scan INSERTs one fresh row per (facility, medicine)
+    pair every run and never deletes, so the table grows ~55M rows / ~19GB per
+    day and eventually fills the colima disk (Postgres PANIC "No space left").
+
+    This deletes SUPERSEDED prediction rows older than the retention window,
+    while preserving everything any reader relies on:
+      - the LATEST row per (facility_id, medicine_id, test_id, prediction_type)
+        — redistribution.py and the facility-detail display read DISTINCT ON
+        the newest row per pair.
+      - any row with actual_value or worker_feedback set — retraining_tasks'
+        30-day drift baseline and field-worker feedback are training signal.
+      - any row referenced by alerts.prediction_id or
+        redistribution_items.trigger_prediction — those are FK RESTRICT.
+
+    Deletes in ctid batches so the first run over an already-bloated table never
+    takes a table-wide lock or opens one giant transaction. Ends with a plain
+    VACUUM ANALYZE to return freed pages to the freelist (caps file growth).
+    A one-time `VACUUM FULL ai_predictions` is still needed to hand the already-
+    allocated space back to the OS — that locks the table, so run it manually.
+
+    Retention window resolves from the arg, else PREDICTION_RETENTION_HOURS,
+    else 6h. Correctness never depends on the window (latest-per-pair + feedback
+    rows are always kept); it only bounds how much recent history is retained.
+    """
+    import psycopg2
+    import psycopg2.extras
+
+    if retention_hours is None:
+        retention_hours = int(os.environ.get("PREDICTION_RETENTION_HOURS", "6"))
+
+    log.info("prune_ai_predictions_started retention_hours=%s", retention_hours)
+
+    # A superseded row = older than the window, carries no feedback/actual, is
+    # not referenced by an alert or redistribution item, and has a newer sibling
+    # for the same (facility, medicine/test, type) key. IS NOT DISTINCT FROM
+    # makes the medicine_id / test_id comparison NULL-safe.
+    victim_cte = """
+        WITH victims AS (
+            SELECT p.ctid
+            FROM ai_predictions p
+            WHERE p.predicted_at < NOW() - (%s * INTERVAL '1 hour')
+              AND p.actual_value    IS NULL
+              AND p.worker_feedback IS NULL
+              AND EXISTS (
+                  SELECT 1 FROM ai_predictions q
+                  WHERE q.facility_id     = p.facility_id
+                    AND q.medicine_id     IS NOT DISTINCT FROM p.medicine_id
+                    AND q.test_id         IS NOT DISTINCT FROM p.test_id
+                    AND q.prediction_type = p.prediction_type
+                    AND q.predicted_at    > p.predicted_at
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM alerts a WHERE a.prediction_id = p.id
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM redistribution_items ri
+                  WHERE ri.trigger_prediction = p.id
+              )
+            LIMIT %s
+        )
+        DELETE FROM ai_predictions d
+        USING victims v
+        WHERE d.ctid = v.ctid
+    """
+
+    try:
+        conn = psycopg2.connect(_sync_db_url())
+        conn.autocommit = False
+        cur = conn.cursor()
+
+        cur.execute("SELECT count(*) FROM ai_predictions")
+        rows_before = int(cur.fetchone()[0])
+
+        total_deleted = 0
+        batches = 0
+        while batches < max_batches:
+            cur.execute(victim_cte, (retention_hours, batch_size))
+            deleted = cur.rowcount
+            conn.commit()  # release locks between batches
+            total_deleted += deleted
+            batches += 1
+            if deleted:
+                log.info(
+                    "prune_batch batch=%s deleted=%s total_deleted=%s",
+                    batches, deleted, total_deleted,
+                )
+            if deleted < batch_size:
+                break  # last partial batch → nothing left to prune
+
+        cur.execute("SELECT count(*) FROM ai_predictions")
+        rows_after = int(cur.fetchone()[0])
+        cur.close()
+        conn.close()
+
+        # VACUUM must run outside a transaction block.
+        vac = psycopg2.connect(_sync_db_url())
+        vac.autocommit = True
+        vcur = vac.cursor()
+        vcur.execute("VACUUM (ANALYZE) ai_predictions")
+        vcur.close()
+        vac.close()
+
+        log.info(
+            "prune_ai_predictions_complete rows_before=%s rows_after=%s "
+            "deleted=%s batches=%s",
+            rows_before, rows_after, total_deleted, batches,
+        )
+        return {
+            "rows_before": rows_before,
+            "rows_after": rows_after,
+            "deleted": total_deleted,
+            "batches": batches,
+            "retention_hours": retention_hours,
+        }
+
+    except Exception as exc:
+        log.error("prune_ai_predictions_failed error=%s", str(exc))
+        raise self.retry(exc=exc)
+
+
+# ---------------------------------------------------------------------------
 # Notification relay
 # ---------------------------------------------------------------------------
 

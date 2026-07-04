@@ -38,6 +38,11 @@ celery_app.conf.update(
             "schedule": 900,  # every 15 minutes
             "options": {"queue": "predictions"},
         },
+        "prune-ai-predictions": {
+            "task": "tasks.prediction_tasks.prune_ai_predictions",
+            "schedule": 3600,  # hourly — caps ai_predictions table growth
+            "options": {"queue": "predictions"},
+        },
         "health-scores-update": {
             "task": "tasks.scoring_tasks.run_health_scores",
             "schedule": 21600,  # every 6 hours
