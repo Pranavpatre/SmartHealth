@@ -2475,9 +2475,23 @@ const bn = {
   "state.West Bengal": "পশ্চিমবঙ্গ",
 }
 
+const SUPPORTED = ['en', 'hi', 'mr', 'gu', 'pa', 'ta', 'ml', 'te', 'kn', 'bn']
+const LANG_KEY = 'smarthealth-lang'
+
+// Persist the chosen language so it survives page reloads / full navigations.
+const saved = (() => {
+  try {
+    const s = localStorage.getItem(LANG_KEY)
+    return s && SUPPORTED.includes(s) ? s : 'en'
+  } catch {
+    return 'en'
+  }
+})()
+
 i18n.use(initReactI18next).init({
-  lng: 'en',
+  lng: saved,
   fallbackLng: 'en',
+  supportedLngs: SUPPORTED,
   resources: {
     en: { translation: en },
     hi: { translation: hi },
@@ -2491,6 +2505,14 @@ i18n.use(initReactI18next).init({
     bn: { translation: bn },
   },
   interpolation: { escapeValue: false },
+})
+
+i18n.on('languageChanged', (lng) => {
+  try {
+    localStorage.setItem(LANG_KEY, lng)
+  } catch {
+    /* ignore */
+  }
 })
 
 export default i18n
