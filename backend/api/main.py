@@ -13,7 +13,7 @@ from slowapi.util import get_remote_address
 
 from config import get_settings
 from db import engine, Base
-from routers import alerts, assistant, attendance, ledger, auth, facilities, health_scores, medicines, notifications, overview, predict, redistribution, sync, webhooks
+from routers import alerts, assistant, attendance, ledger, auth, facilities, health_scores, medicines, notifications, overview, predict, redistribution, speech, sync, webhooks
 from services.websocket_manager import WebSocketManager
 
 settings = get_settings()
@@ -103,6 +103,7 @@ app.include_router(health_scores.router, prefix="/api/v1", tags=["health-scores"
 app.include_router(webhooks.router, prefix="/api/v1", tags=["webhooks"])
 app.include_router(sync.router, prefix="/api/v1", tags=["sync"])
 app.include_router(assistant.router, prefix="/api/v1", tags=["assistant"])
+app.include_router(speech.router, prefix="/api/v1", tags=["speech"])
 app.include_router(overview.router, prefix="/api/v1", tags=["overview"])
 app.include_router(attendance.router, prefix="/api/v1", tags=["attendance"])
 app.include_router(ledger.router, prefix="/api/v1", tags=["ledger"])

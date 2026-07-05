@@ -264,6 +264,8 @@ const en = {
   "redist.district": "District",
   "redist.select_district": "Select a district",
   "redist.district_required": "Select a district to view or generate plans.",
+  "assistant.mic": "Speak",
+  "assistant.voice_unavailable": "Voice input unavailable.",
 }
 
 const hi = {
@@ -525,6 +527,8 @@ const hi = {
   "redist.district": "ज़िला",
   "redist.select_district": "ज़िला चुनें",
   "redist.district_required": "योजनाएँ देखने या बनाने के लिए ज़िला चुनें।",
+  "assistant.mic": "बोलें",
+  "assistant.voice_unavailable": "आवाज़ इनपुट उपलब्ध नहीं है।",
 }
 
 const mr = {
@@ -786,6 +790,8 @@ const mr = {
   "redist.district": "जिल्हा",
   "redist.select_district": "जिल्हा निवडा",
   "redist.district_required": "योजना पाहण्यासाठी किंवा तयार करण्यासाठी जिल्हा निवडा.",
+  "assistant.mic": "बोला",
+  "assistant.voice_unavailable": "आवाज इनपुट उपलब्ध नाही.",
 }
 
 const gu = {
@@ -892,7 +898,7 @@ const gu = {
   "assistant.response_language": "જવાબની ભાષા:",
   "assistant.placeholder": "તમારા જિલ્લા વિશે પ્રશ્ન પૂછો… (મોકલવા માટે Enter, નવી લાઇન માટે Shift+Enter)",
   "assistant.send": "મોકલો",
-  "assistant.greeting": "નમસ્તે! હું PrediCare જિલ્લા AI સહાયક છું. તમારા જિલ્લાની આરોગ્ય સુવિધાઓ, સ્ટોક સ્તર અથવા ચેતવણીઓ વિશે મને કંઈપણ પૂછો.",
+  "assistant.greeting": "નમસ્તે! હું SmartHealth જિલ્લા AI સહાયક છું. તમારા જિલ્લાની આરોગ્ય સુવિધાઓ, સ્ટોક સ્તર અથવા ચેતવણીઓ વિશે મને કંઈપણ પૂછો.",
   "assistant.error": "માફ કરશો, તમારા પ્રશ્નની પ્રક્રિયા કરતી વખતે ભૂલ થઈ. કૃપા કરીને ફરી પ્રયાસ કરો.",
   "assistant.q1": "આ અઠવાડિયે કયા PHC ને સ્ટોક-આઉટનો સામનો કરવો પડશે?",
   "assistant.q2": "જિલ્લાનો સરેરાશ આરોગ્ય સ્કોર કેટલો છે?",
@@ -1047,6 +1053,8 @@ const gu = {
   "redist.district": "જિલ્લો",
   "redist.select_district": "જિલ્લો પસંદ કરો",
   "redist.district_required": "યોજનાઓ જોવા અથવા બનાવવા માટે જિલ્લો પસંદ કરો.",
+  "assistant.mic": "બોલો",
+  "assistant.voice_unavailable": "વૉઇસ ઇનપુટ ઉપલબ્ધ નથી.",
 }
 
 const pa = {
@@ -1153,7 +1161,7 @@ const pa = {
   "assistant.response_language": "ਜਵਾਬ ਦੀ ਭਾਸ਼ਾ:",
   "assistant.placeholder": "ਆਪਣੇ ਜ਼ਿਲ੍ਹੇ ਬਾਰੇ ਸਵਾਲ ਪੁੱਛੋ… (ਭੇਜਣ ਲਈ Enter, ਨਵੀਂ ਲਾਈਨ ਲਈ Shift+Enter)",
   "assistant.send": "ਭੇਜੋ",
-  "assistant.greeting": "ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ PrediCare ਜ਼ਿਲ੍ਹਾ AI ਸਹਾਇਕ ਹਾਂ। ਆਪਣੇ ਜ਼ਿਲ੍ਹੇ ਦੀਆਂ ਸਿਹਤ ਸਹੂਲਤਾਂ, ਸਟਾਕ ਪੱਧਰਾਂ ਜਾਂ ਚੇਤਾਵਨੀਆਂ ਬਾਰੇ ਮੈਨੂੰ ਕੁਝ ਵੀ ਪੁੱਛੋ।",
+  "assistant.greeting": "ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ SmartHealth ਜ਼ਿਲ੍ਹਾ AI ਸਹਾਇਕ ਹਾਂ। ਆਪਣੇ ਜ਼ਿਲ੍ਹੇ ਦੀਆਂ ਸਿਹਤ ਸਹੂਲਤਾਂ, ਸਟਾਕ ਪੱਧਰਾਂ ਜਾਂ ਚੇਤਾਵਨੀਆਂ ਬਾਰੇ ਮੈਨੂੰ ਕੁਝ ਵੀ ਪੁੱਛੋ।",
   "assistant.error": "ਮਾਫ਼ ਕਰਨਾ, ਤੁਹਾਡੇ ਸਵਾਲ ਦੀ ਪ੍ਰਕਿਰਿਆ ਕਰਦੇ ਸਮੇਂ ਇੱਕ ਗਲਤੀ ਹੋਈ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
   "assistant.q1": "ਇਸ ਹਫ਼ਤੇ ਕਿਹੜੇ PHC ਸਟਾਕ-ਆਊਟ ਦਾ ਸਾਹਮਣਾ ਕਰ ਰਹੇ ਹਨ?",
   "assistant.q2": "ਜ਼ਿਲ੍ਹੇ ਦਾ ਔਸਤ ਸਿਹਤ ਸਕੋਰ ਕੀ ਹੈ?",
@@ -1308,6 +1316,8 @@ const pa = {
   "redist.district": "ਜ਼ਿਲ੍ਹਾ",
   "redist.select_district": "ਜ਼ਿਲ੍ਹਾ ਚੁਣੋ",
   "redist.district_required": "ਯੋਜਨਾਵਾਂ ਵੇਖਣ ਜਾਂ ਬਣਾਉਣ ਲਈ ਜ਼ਿਲ੍ਹਾ ਚੁਣੋ।",
+  "assistant.mic": "ਬੋਲੋ",
+  "assistant.voice_unavailable": "ਆਵਾਜ਼ ਇਨਪੁੱਟ ਉਪਲਬਧ ਨਹੀਂ।",
 }
 
 const ta = {
@@ -1414,7 +1424,7 @@ const ta = {
   "assistant.response_language": "பதில் மொழி:",
   "assistant.placeholder": "உங்கள் மாவட்டம் குறித்து ஒரு கேள்வி கேளுங்கள்… (அனுப்ப Enter, புதிய வரிக்கு Shift+Enter)",
   "assistant.send": "அனுப்பு",
-  "assistant.greeting": "வணக்கம்! நான் PrediCare மாவட்ட AI உதவியாளர். உங்கள் மாவட்டத்தின் சுகாதார வசதிகள், பங்கு நிலைகள் அல்லது எச்சரிக்கைகள் குறித்து என்னிடம் எதையும் கேளுங்கள்.",
+  "assistant.greeting": "வணக்கம்! நான் SmartHealth மாவட்ட AI உதவியாளர். உங்கள் மாவட்டத்தின் சுகாதார வசதிகள், பங்கு நிலைகள் அல்லது எச்சரிக்கைகள் குறித்து என்னிடம் எதையும் கேளுங்கள்.",
   "assistant.error": "மன்னிக்கவும், உங்கள் கேள்வியைச் செயலாக்கும்போது ஒரு பிழை ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.",
   "assistant.q1": "இந்த வாரம் எந்த PHC-களுக்கு பங்கு தீர்வு ஏற்படும்?",
   "assistant.q2": "மாவட்டத்தின் சராசரி சுகாதார மதிப்பெண் என்ன?",
@@ -1569,6 +1579,8 @@ const ta = {
   "redist.district": "மாவட்டம்",
   "redist.select_district": "மாவட்டத்தைத் தேர்ந்தெடுக்கவும்",
   "redist.district_required": "திட்டங்களைப் பார்க்க அல்லது உருவாக்க மாவட்டத்தைத் தேர்ந்தெடுக்கவும்.",
+  "assistant.mic": "பேசு",
+  "assistant.voice_unavailable": "குரல் உள்ளீடு கிடைக்கவில்லை.",
 }
 
 const ml = {
@@ -1675,7 +1687,7 @@ const ml = {
   "assistant.response_language": "മറുപടിയുടെ ഭാഷ:",
   "assistant.placeholder": "നിങ്ങളുടെ ജില്ലയെക്കുറിച്ച് ഒരു ചോദ്യം ചോദിക്കുക… (അയയ്ക്കാൻ Enter, പുതിയ വരിക്ക് Shift+Enter)",
   "assistant.send": "അയയ്ക്കുക",
-  "assistant.greeting": "നമസ്കാരം! ഞാൻ PrediCare ജില്ലാ AI സഹായിയാണ്. നിങ്ങളുടെ ജില്ലയിലെ ആരോഗ്യ കേന്ദ്രങ്ങൾ, സ്റ്റോക്ക് നിലകൾ, അല്ലെങ്കിൽ മുന്നറിയിപ്പുകൾ എന്നിവയെക്കുറിച്ച് എന്തും എന്നോട് ചോദിക്കാം.",
+  "assistant.greeting": "നമസ്കാരം! ഞാൻ SmartHealth ജില്ലാ AI സഹായിയാണ്. നിങ്ങളുടെ ജില്ലയിലെ ആരോഗ്യ കേന്ദ്രങ്ങൾ, സ്റ്റോക്ക് നിലകൾ, അല്ലെങ്കിൽ മുന്നറിയിപ്പുകൾ എന്നിവയെക്കുറിച്ച് എന്തും എന്നോട് ചോദിക്കാം.",
   "assistant.error": "ക്ഷമിക്കണം, നിങ്ങളുടെ ചോദ്യം പ്രോസസ്സ് ചെയ്യുന്നതിനിടെ ഒരു പിശക് സംഭവിച്ചു. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
   "assistant.q1": "ഈ ആഴ്ച ഏതൊക്കെ PHC-കൾക്ക് സ്റ്റോക്ക്-ഔട്ട് നേരിടേണ്ടിവരും?",
   "assistant.q2": "ജില്ലയുടെ ശരാശരി ആരോഗ്യ സ്കോർ എത്രയാണ്?",
@@ -1830,6 +1842,8 @@ const ml = {
   "redist.district": "ജില്ല",
   "redist.select_district": "ജില്ല തിരഞ്ഞെടുക്കുക",
   "redist.district_required": "പദ്ധതികൾ കാണാനോ തയ്യാറാക്കാനോ ജില്ല തിരഞ്ഞെടുക്കുക.",
+  "assistant.mic": "സംസാരിക്കുക",
+  "assistant.voice_unavailable": "ശബ്ദ ഇൻപുട്ട് ലഭ്യമല്ല.",
 }
 
 const te = {
@@ -1936,7 +1950,7 @@ const te = {
   "assistant.response_language": "సమాధాన భాష:",
   "assistant.placeholder": "మీ జిల్లా గురించి ఒక ప్రశ్న అడగండి… (పంపడానికి Enter, కొత్త లైన్‌కు Shift+Enter)",
   "assistant.send": "పంపండి",
-  "assistant.greeting": "నమస్కారం! నేను PrediCare జిల్లా AI సహాయకుడిని. మీ జిల్లాలోని ఆరోగ్య సదుపాయాలు, నిల్వ స్థాయిలు లేదా హెచ్చరికల గురించి నన్ను ఏదైనా అడగండి.",
+  "assistant.greeting": "నమస్కారం! నేను SmartHealth జిల్లా AI సహాయకుడిని. మీ జిల్లాలోని ఆరోగ్య సదుపాయాలు, నిల్వ స్థాయిలు లేదా హెచ్చరికల గురించి నన్ను ఏదైనా అడగండి.",
   "assistant.error": "క్షమించండి, మీ ప్రశ్నను ప్రాసెస్ చేయడంలో లోపం ఏర్పడింది. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "assistant.q1": "ఈ వారం ఏ PHCలు నిల్వ ముగింపును ఎదుర్కొంటున్నాయి?",
   "assistant.q2": "జిల్లా సగటు ఆరోగ్య స్కోర్ ఎంత?",
@@ -2091,6 +2105,8 @@ const te = {
   "redist.district": "జిల్లా",
   "redist.select_district": "జిల్లాను ఎంచుకోండి",
   "redist.district_required": "ప్రణాళికలను చూడటానికి లేదా రూపొందించడానికి జిల్లాను ఎంచుకోండి.",
+  "assistant.mic": "మాట్లాడండి",
+  "assistant.voice_unavailable": "వాయిస్ ఇన్‌పుట్ అందుబాటులో లేదు.",
 }
 
 const kn = {
@@ -2197,7 +2213,7 @@ const kn = {
   "assistant.response_language": "ಉತ್ತರದ ಭಾಷೆ:",
   "assistant.placeholder": "ನಿಮ್ಮ ಜಿಲ್ಲೆಯ ಬಗ್ಗೆ ಪ್ರಶ್ನೆ ಕೇಳಿ… (ಕಳುಹಿಸಲು Enter, ಹೊಸ ಸಾಲಿಗೆ Shift+Enter)",
   "assistant.send": "ಕಳುಹಿಸಿ",
-  "assistant.greeting": "ನಮಸ್ಕಾರ! ನಾನು PrediCare ಜಿಲ್ಲಾ AI ಸಹಾಯಕ. ನಿಮ್ಮ ಜಿಲ್ಲೆಯ ಆರೋಗ್ಯ ಕೇಂದ್ರಗಳು, ಸ್ಟಾಕ್ ಮಟ್ಟಗಳು ಅಥವಾ ಎಚ್ಚರಿಕೆಗಳ ಬಗ್ಗೆ ನನ್ನನ್ನು ಏನಾದರೂ ಕೇಳಿ.",
+  "assistant.greeting": "ನಮಸ್ಕಾರ! ನಾನು SmartHealth ಜಿಲ್ಲಾ AI ಸಹಾಯಕ. ನಿಮ್ಮ ಜಿಲ್ಲೆಯ ಆರೋಗ್ಯ ಕೇಂದ್ರಗಳು, ಸ್ಟಾಕ್ ಮಟ್ಟಗಳು ಅಥವಾ ಎಚ್ಚರಿಕೆಗಳ ಬಗ್ಗೆ ನನ್ನನ್ನು ಏನಾದರೂ ಕೇಳಿ.",
   "assistant.error": "ಕ್ಷಮಿಸಿ, ನಿಮ್ಮ ಪ್ರಶ್ನೆಯನ್ನು ಪ್ರಕ್ರಿಯೆಗೊಳಿಸುವಾಗ ದೋಷ ಸಂಭವಿಸಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
   "assistant.q1": "ಈ ವಾರ ಯಾವ PHC ಗಳು ಸ್ಟಾಕ್-ಔಟ್ ಎದುರಿಸುತ್ತವೆ?",
   "assistant.q2": "ಜಿಲ್ಲೆಯ ಸರಾಸರಿ ಆರೋಗ್ಯ ಸ್ಕೋರ್ ಎಷ್ಟು?",
@@ -2352,6 +2368,8 @@ const kn = {
   "redist.district": "ಜಿಲ್ಲೆ",
   "redist.select_district": "ಜಿಲ್ಲೆ ಆಯ್ಕೆಮಾಡಿ",
   "redist.district_required": "ಯೋಜನೆಗಳನ್ನು ವೀಕ್ಷಿಸಲು ಅಥವಾ ರಚಿಸಲು ಜಿಲ್ಲೆ ಆಯ್ಕೆಮಾಡಿ.",
+  "assistant.mic": "ಮಾತನಾಡಿ",
+  "assistant.voice_unavailable": "ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಲಭ್ಯವಿಲ್ಲ.",
 }
 
 const bn = {
@@ -2458,7 +2476,7 @@ const bn = {
   "assistant.response_language": "উত্তরের ভাষা:",
   "assistant.placeholder": "আপনার জেলা সম্পর্কে একটি প্রশ্ন জিজ্ঞাসা করুন… (পাঠাতে Enter, নতুন লাইনের জন্য Shift+Enter)",
   "assistant.send": "পাঠান",
-  "assistant.greeting": "নমস্কার! আমি PrediCare জেলা AI সহকারী। আপনার জেলার স্বাস্থ্য সুবিধা, স্টকের স্তর বা সতর্কতা সম্পর্কে আমাকে যেকোনো কিছু জিজ্ঞাসা করুন।",
+  "assistant.greeting": "নমস্কার! আমি SmartHealth জেলা AI সহকারী। আপনার জেলার স্বাস্থ্য সুবিধা, স্টকের স্তর বা সতর্কতা সম্পর্কে আমাকে যেকোনো কিছু জিজ্ঞাসা করুন।",
   "assistant.error": "দুঃখিত, আপনার প্রশ্ন প্রক্রিয়া করার সময় একটি ত্রুটি ঘটেছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
   "assistant.q1": "এই সপ্তাহে কোন PHC-গুলিতে স্টক-আউটের সম্মুখীন হতে হবে?",
   "assistant.q2": "জেলার গড় স্বাস্থ্য স্কোর কত?",
@@ -2613,6 +2631,8 @@ const bn = {
   "redist.district": "জেলা",
   "redist.select_district": "জেলা নির্বাচন করুন",
   "redist.district_required": "পরিকল্পনা দেখতে বা তৈরি করতে একটি জেলা নির্বাচন করুন।",
+  "assistant.mic": "বলুন",
+  "assistant.voice_unavailable": "ভয়েস ইনপুট উপলব্ধ নেই।",
 }
 
 const SUPPORTED = ["en","hi","mr","gu","pa","ta","ml","te","kn","bn"]

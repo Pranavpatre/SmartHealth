@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { apiClient } from '../api/client'
+import { speechToText, textToSpeech } from '../api/speech'
 import { formatClock } from '../lib/format'
 
 const SUPPORTED_LANGUAGES = [
@@ -58,14 +59,66 @@ export default function AssistantPage() {
   const [input, setInput] = useState('')
   const [language, setLanguage] = useState('en')
   const [loading, setLoading] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [voiceBusy, setVoiceBusy] = useState(false) // transcribing
+  const [voiceError, setVoiceError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  async function sendMessage(question: string) {
+  // Speak an answer via Gemini TTS (Google AI Studio). Silent no-op on failure.
+  async function speakAnswer(text: string) {
+    try {
+      const url = await textToSpeech(text, language)
+      if (!audioRef.current) audioRef.current = new Audio()
+      audioRef.current.src = url
+      await audioRef.current.play()
+    } catch {
+      /* TTS unavailable — the text answer is already shown */
+    }
+  }
+
+  async function startRecording() {
+    setVoiceError(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream)
+      chunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data) }
+      mr.onstop = async () => {
+        stream.getTracks().forEach((tr) => tr.stop())
+        const blob = new Blob(chunksRef.current, { type: mr.mimeType || 'audio/webm' })
+        setVoiceBusy(true)
+        try {
+          const text = await speechToText(blob, language)
+          if (text.trim()) await sendMessage(text, true)
+          else setVoiceError(t('assistant.voice_unavailable'))
+        } catch {
+          setVoiceError(t('assistant.voice_unavailable'))
+        } finally {
+          setVoiceBusy(false)
+        }
+      }
+      mediaRecorderRef.current = mr
+      mr.start()
+      setRecording(true)
+    } catch {
+      setVoiceError(t('assistant.voice_unavailable'))
+    }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop()
+    setRecording(false)
+  }
+
+  async function sendMessage(question: string, speak = false) {
     if (!question.trim() || loading) return
 
     const userMsg: Message = {
@@ -91,6 +144,7 @@ export default function AssistantPage() {
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, assistantMsg])
+      if (speak) await speakAnswer(data.answer)
     } catch {
       const errorMsg: Message = {
         id: crypto.randomUUID(),
@@ -159,7 +213,20 @@ export default function AssistantPage() {
               >
                 {msg.content}
               </div>
-              <span className="text-xs text-gray-400 mt-1 px-1">{formatTime(msg.timestamp)}</span>
+              <div className="flex items-center gap-2 mt-1 px-1">
+                <span className="text-xs text-gray-400">{formatTime(msg.timestamp)}</span>
+                {msg.role === 'assistant' && (
+                  <button
+                    onClick={() => speakAnswer(msg.content)}
+                    title={t('assistant.mic')}
+                    className="text-gray-400 hover:text-teal-600 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M5 9v6h4l5 5V4L9 9H5z" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -194,6 +261,8 @@ export default function AssistantPage() {
         </div>
       )}
 
+      {voiceError && <p className="mt-2 text-xs text-red-600 text-center">{voiceError}</p>}
+
       {/* Input area */}
       <div className="mt-3 flex gap-3 bg-white rounded-xl border border-gray-200 shadow-sm p-3">
         <textarea
@@ -205,6 +274,26 @@ export default function AssistantPage() {
           rows={2}
           className="flex-1 resize-none text-sm text-gray-900 placeholder-gray-400 outline-none"
         />
+        <button
+          onClick={() => (recording ? stopRecording() : startRecording())}
+          disabled={loading || voiceBusy}
+          title={t('assistant.mic')}
+          aria-label={t('assistant.mic')}
+          className={`self-end rounded-lg px-3 py-2 transition-colors flex items-center disabled:opacity-50 ${
+            recording ? 'bg-red-600 text-white animate-pulse' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          {voiceBusy ? (
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 7v3m0-3a4 4 0 004-4V5a4 4 0 00-8 0v6a4 4 0 004 4z" />
+            </svg>
+          )}
+        </button>
         <button
           onClick={() => sendMessage(input)}
           disabled={loading || !input.trim()}
