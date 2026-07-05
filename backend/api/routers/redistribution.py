@@ -198,22 +198,31 @@ async def _load_plan_or_404(
 # ---------------------------------------------------------------------------
 
 
+def _effective_district(current_user: User, district_id_param: Optional[int]) -> int:
+    """Resolve the district to operate on. Field/district users are pinned to
+    their own district; admins (no district) must pass ?district_id=."""
+    if getattr(current_user, "district_id", None):
+        return current_user.district_id
+    if current_user.role in ("STATE_ADMIN", "SUPERADMIN") and district_id_param:
+        return district_id_param
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Select a district to view or generate redistribution plans.",
+    )
+
+
 @router.get("/plans", response_model=dict)
 async def list_plans(
     request: Request,
     page: int = 1,
     page_size: int = 20,
     status_filter: Optional[str] = None,
+    district_id: Optional[int] = None,
     current_user: User = Depends(require_role("DISTRICT_OFFICER")),
     db: AsyncSession = Depends(get_db),
 ):
     """List redistribution plans for the current user's district, paginated."""
-    district_id = current_user.district_id
-    if not district_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User has no associated district",
-        )
+    district_id = _effective_district(current_user, district_id)
 
     stmt = select(RedistributionPlan).where(
         RedistributionPlan.district_id == district_id
@@ -255,6 +264,7 @@ async def list_plans(
 @router.post("/plans", response_model=RedistributionPlanResponse, status_code=status.HTTP_201_CREATED)
 async def create_plan(
     request: Request,
+    district_id: Optional[int] = None,
     current_user: User = Depends(require_role("DISTRICT_OFFICER")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -266,12 +276,7 @@ async def create_plan(
     4. Persist RedistributionPlan + RedistributionItem rows
     5. Return full plan with line items
     """
-    district_id = current_user.district_id
-    if not district_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User has no associated district",
-        )
+    district_id = _effective_district(current_user, district_id)
 
     # Import solver at call time — path is relative to the ML models directory
     try:
@@ -445,16 +450,12 @@ async def create_plan(
 @router.get("/plans/{plan_id}", response_model=RedistributionPlanResponse)
 async def get_plan(
     plan_id: uuid.UUID,
+    district_id: Optional[int] = None,
     current_user: User = Depends(require_role("DISTRICT_OFFICER")),
     db: AsyncSession = Depends(get_db),
 ):
     """Return a single redistribution plan with all line items, facility names, and medicine names."""
-    district_id = current_user.district_id
-    if not district_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User has no associated district",
-        )
+    district_id = _effective_district(current_user, district_id)
     plan, items = await _load_plan_or_404(plan_id, district_id, db)
     return await _build_plan_response(plan, items, db)
 
@@ -463,6 +464,7 @@ async def get_plan(
 async def approve_plan(
     plan_id: uuid.UUID,
     request: Request,
+    district_id: Optional[int] = None,
     current_user: User = Depends(require_role("DISTRICT_OFFICER")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -474,12 +476,7 @@ async def approve_plan(
     4. Broadcasts WebSocket event
     5. Resolves linked stockout alerts
     """
-    district_id = current_user.district_id
-    if not district_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User has no associated district",
-        )
+    district_id = _effective_district(current_user, district_id)
 
     plan, _items = await _load_plan_or_404(plan_id, district_id, db)
 
@@ -558,16 +555,12 @@ async def approve_plan(
 async def defer_plan(
     plan_id: uuid.UUID,
     body: DeferRequest,
+    district_id: Optional[int] = None,
     current_user: User = Depends(require_role("DISTRICT_OFFICER")),
     db: AsyncSession = Depends(get_db),
 ):
     """Defer a redistribution plan with a mandatory reason."""
-    district_id = current_user.district_id
-    if not district_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User has no associated district",
-        )
+    district_id = _effective_district(current_user, district_id)
 
     plan, items = await _load_plan_or_404(plan_id, district_id, db)
 

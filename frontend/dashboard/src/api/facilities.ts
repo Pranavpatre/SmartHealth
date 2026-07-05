@@ -95,6 +95,65 @@ export const getFacilities = async () => {
   return data
 }
 
+// ── Geo filter dropdowns + rich server-side browse ──────────────────────────
+export interface GeoOption {
+  id: number
+  name: string
+}
+
+export const getStates = async () => {
+  const { data } = await apiClient.get<GeoOption[]>('/facilities/geo/states')
+  return data
+}
+
+export const getDistricts = async (stateId?: number) => {
+  const { data } = await apiClient.get<GeoOption[]>('/facilities/geo/districts', {
+    params: stateId ? { state_id: stateId } : {},
+  })
+  return data
+}
+
+export interface FacilityBrowseRow {
+  id: string
+  code: string
+  name: string
+  facility_type: string
+  district_name: string | null
+  state_name: string | null
+  health_score: number | null
+  traffic_light: 'GREEN' | 'YELLOW' | 'RED' | null
+  stockout_score: number | null
+  doctors_present: number | null
+  patients: number | null
+  beds_occupied: number | null
+  bed_capacity: number
+  active_alerts: number
+}
+
+export interface FacilityBrowseResponse {
+  total: number
+  items: FacilityBrowseRow[]
+}
+
+export interface BrowseParams {
+  state_id?: number
+  district_id?: number
+  facility_type?: string
+  status?: string
+  search?: string
+  page_size?: number
+}
+
+// Server-side filtered facility list (fixes the client-side 1000-row cap that
+// hid critical facilities). Returns staffing / footfall / stock-out / beds.
+export const browseFacilities = async (params: BrowseParams) => {
+  const clean = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== 'ALL'),
+  )
+  const { data } = await apiClient.get<FacilityBrowseResponse>('/facilities/browse', { params: clean })
+  return data
+}
+
 export const getFacility = async (id: string) => {
   const { data } = await apiClient.get<FacilityDetail>(`/facilities/${id}`)
   return data

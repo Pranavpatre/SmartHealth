@@ -250,6 +250,20 @@ const en = {
   "state.Uttar Pradesh": "Uttar Pradesh",
   "state.Uttarakhand": "Uttarakhand",
   "state.West Bengal": "West Bengal",
+  "facilities.state": "State",
+  "facilities.district": "District",
+  "facilities.type": "Type",
+  "facilities.all_states": "All states",
+  "facilities.all_districts": "All districts",
+  "facilities.select_prompt": "Choose a state, district, or status filter to list facilities.",
+  "facilities.col_district": "District",
+  "facilities.col_doctors": "Doctors",
+  "facilities.col_patients": "Patients",
+  "facilities.col_stockout": "Stock-out score",
+  "facilities.col_beds": "Beds",
+  "redist.district": "District",
+  "redist.select_district": "Select a district",
+  "redist.district_required": "Select a district to view or generate plans.",
 }
 
 const hi = {
@@ -497,6 +511,20 @@ const hi = {
   "state.Uttar Pradesh": "उत्तर प्रदेश",
   "state.Uttarakhand": "उत्तराखंड",
   "state.West Bengal": "पश्चिम बंगाल",
+  "facilities.state": "राज्य",
+  "facilities.district": "ज़िला",
+  "facilities.type": "प्रकार",
+  "facilities.all_states": "सभी राज्य",
+  "facilities.all_districts": "सभी ज़िले",
+  "facilities.select_prompt": "सुविधाओं की सूची देखने के लिए राज्य, ज़िला या स्थिति फ़िल्टर चुनें।",
+  "facilities.col_district": "ज़िला",
+  "facilities.col_doctors": "चिकित्सक",
+  "facilities.col_patients": "रोगी",
+  "facilities.col_stockout": "स्टॉक-आउट स्कोर",
+  "facilities.col_beds": "बिस्तर",
+  "redist.district": "ज़िला",
+  "redist.select_district": "ज़िला चुनें",
+  "redist.district_required": "योजनाएँ देखने या बनाने के लिए ज़िला चुनें।",
 }
 
 const mr = {
@@ -744,6 +772,20 @@ const mr = {
   "state.Uttar Pradesh": "उत्तर प्रदेश",
   "state.Uttarakhand": "उत्तराखंड",
   "state.West Bengal": "पश्चिम बंगाल",
+  "facilities.state": "राज्य",
+  "facilities.district": "जिल्हा",
+  "facilities.type": "प्रकार",
+  "facilities.all_states": "सर्व राज्ये",
+  "facilities.all_districts": "सर्व जिल्हे",
+  "facilities.select_prompt": "सुविधांची यादी पाहण्यासाठी राज्य, जिल्हा किंवा स्थिती फिल्टर निवडा.",
+  "facilities.col_district": "जिल्हा",
+  "facilities.col_doctors": "डॉक्टर",
+  "facilities.col_patients": "रुग्ण",
+  "facilities.col_stockout": "स्टॉक-आउट गुण",
+  "facilities.col_beds": "खाटा",
+  "redist.district": "जिल्हा",
+  "redist.select_district": "जिल्हा निवडा",
+  "redist.district_required": "योजना पाहण्यासाठी किंवा तयार करण्यासाठी जिल्हा निवडा.",
 }
 
 const gu = {
@@ -991,6 +1033,20 @@ const gu = {
   "state.Uttar Pradesh": "ઉત્તર પ્રદેશ",
   "state.Uttarakhand": "ઉત્તરાખંડ",
   "state.West Bengal": "પશ્ચિમ બંગાળ",
+  "facilities.state": "રાજ્ય",
+  "facilities.district": "જિલ્લો",
+  "facilities.type": "પ્રકાર",
+  "facilities.all_states": "બધા રાજ્યો",
+  "facilities.all_districts": "બધા જિલ્લા",
+  "facilities.select_prompt": "સુવિધાઓની યાદી જોવા માટે રાજ્ય, જિલ્લો અથવા સ્થિતિ ફિલ્ટર પસંદ કરો.",
+  "facilities.col_district": "જિલ્લો",
+  "facilities.col_doctors": "ડૉક્ટર",
+  "facilities.col_patients": "દર્દી",
+  "facilities.col_stockout": "સ્ટૉક-આઉટ સ્કોર",
+  "facilities.col_beds": "પથારી",
+  "redist.district": "જિલ્લો",
+  "redist.select_district": "જિલ્લો પસંદ કરો",
+  "redist.district_required": "યોજનાઓ જોવા અથવા બનાવવા માટે જિલ્લો પસંદ કરો.",
 }
 
 const pa = {
@@ -1238,6 +1294,20 @@ const pa = {
   "state.Uttar Pradesh": "ਉੱਤਰ ਪ੍ਰਦੇਸ਼",
   "state.Uttarakhand": "ਉੱਤਰਾਖੰਡ",
   "state.West Bengal": "ਪੱਛਮੀ ਬੰਗਾਲ",
+  "facilities.state": "ਰਾਜ",
+  "facilities.district": "ਜ਼ਿਲ੍ਹਾ",
+  "facilities.type": "ਕਿਸਮ",
+  "facilities.all_states": "ਸਾਰੇ ਰਾਜ",
+  "facilities.all_districts": "ਸਾਰੇ ਜ਼ਿਲ੍ਹੇ",
+  "facilities.select_prompt": "ਸੁਵਿਧਾਵਾਂ ਦੀ ਸੂਚੀ ਵੇਖਣ ਲਈ ਰਾਜ, ਜ਼ਿਲ੍ਹਾ ਜਾਂ ਸਥਿਤੀ ਫਿਲਟਰ ਚੁਣੋ।",
+  "facilities.col_district": "ਜ਼ਿਲ੍ਹਾ",
+  "facilities.col_doctors": "ਡਾਕਟਰ",
+  "facilities.col_patients": "ਮਰੀਜ਼",
+  "facilities.col_stockout": "ਸਟਾਕ-ਆਊਟ ਸਕੋਰ",
+  "facilities.col_beds": "ਬੈੱਡ",
+  "redist.district": "ਜ਼ਿਲ੍ਹਾ",
+  "redist.select_district": "ਜ਼ਿਲ੍ਹਾ ਚੁਣੋ",
+  "redist.district_required": "ਯੋਜਨਾਵਾਂ ਵੇਖਣ ਜਾਂ ਬਣਾਉਣ ਲਈ ਜ਼ਿਲ੍ਹਾ ਚੁਣੋ।",
 }
 
 const ta = {
@@ -1485,6 +1555,20 @@ const ta = {
   "state.Uttar Pradesh": "உத்தரப் பிரதேசம்",
   "state.Uttarakhand": "உத்தராகண்ட்",
   "state.West Bengal": "மேற்கு வங்காளம்",
+  "facilities.state": "மாநிலம்",
+  "facilities.district": "மாவட்டம்",
+  "facilities.type": "வகை",
+  "facilities.all_states": "அனைத்து மாநிலங்கள்",
+  "facilities.all_districts": "அனைத்து மாவட்டங்கள்",
+  "facilities.select_prompt": "வசதிகளைப் பட்டியலிட மாநிலம், மாவட்டம் அல்லது நிலை வடிகட்டியைத் தேர்ந்தெடுக்கவும்.",
+  "facilities.col_district": "மாவட்டம்",
+  "facilities.col_doctors": "மருத்துவர்கள்",
+  "facilities.col_patients": "நோயாளிகள்",
+  "facilities.col_stockout": "இருப்புப் பற்றாக்குறை மதிப்பெண்",
+  "facilities.col_beds": "படுக்கைகள்",
+  "redist.district": "மாவட்டம்",
+  "redist.select_district": "மாவட்டத்தைத் தேர்ந்தெடுக்கவும்",
+  "redist.district_required": "திட்டங்களைப் பார்க்க அல்லது உருவாக்க மாவட்டத்தைத் தேர்ந்தெடுக்கவும்.",
 }
 
 const ml = {
@@ -1732,6 +1816,20 @@ const ml = {
   "state.Uttar Pradesh": "ഉത്തർപ്രദേശ്",
   "state.Uttarakhand": "ഉത്തരാഖണ്ഡ്",
   "state.West Bengal": "പശ്ചിമ ബംഗാൾ",
+  "facilities.state": "സംസ്ഥാനം",
+  "facilities.district": "ജില്ല",
+  "facilities.type": "തരം",
+  "facilities.all_states": "എല്ലാ സംസ്ഥാനങ്ങളും",
+  "facilities.all_districts": "എല്ലാ ജില്ലകളും",
+  "facilities.select_prompt": "സൗകര്യങ്ങൾ പട്ടികപ്പെടുത്താൻ സംസ്ഥാനം, ജില്ല അല്ലെങ്കിൽ സ്ഥിതി ഫിൽട്ടർ തിരഞ്ഞെടുക്കുക.",
+  "facilities.col_district": "ജില്ല",
+  "facilities.col_doctors": "ഡോക്ടർമാർ",
+  "facilities.col_patients": "രോഗികൾ",
+  "facilities.col_stockout": "സ്റ്റോക്ക്-ഔട്ട് സ്കോർ",
+  "facilities.col_beds": "കിടക്കകൾ",
+  "redist.district": "ജില്ല",
+  "redist.select_district": "ജില്ല തിരഞ്ഞെടുക്കുക",
+  "redist.district_required": "പദ്ധതികൾ കാണാനോ തയ്യാറാക്കാനോ ജില്ല തിരഞ്ഞെടുക്കുക.",
 }
 
 const te = {
@@ -1979,6 +2077,20 @@ const te = {
   "state.Uttar Pradesh": "ఉత్తరప్రదేశ్",
   "state.Uttarakhand": "ఉత్తరాఖండ్",
   "state.West Bengal": "పశ్చిమ బెంగాల్",
+  "facilities.state": "రాష్ట్రం",
+  "facilities.district": "జిల్లా",
+  "facilities.type": "రకం",
+  "facilities.all_states": "అన్ని రాష్ట్రాలు",
+  "facilities.all_districts": "అన్ని జిల్లాలు",
+  "facilities.select_prompt": "సౌకర్యాలను జాబితా చేయడానికి రాష్ట్రం, జిల్లా లేదా స్థితి ఫిల్టర్‌ను ఎంచుకోండి.",
+  "facilities.col_district": "జిల్లా",
+  "facilities.col_doctors": "వైద్యులు",
+  "facilities.col_patients": "రోగులు",
+  "facilities.col_stockout": "స్టాక్-అవుట్ స్కోరు",
+  "facilities.col_beds": "పడకలు",
+  "redist.district": "జిల్లా",
+  "redist.select_district": "జిల్లాను ఎంచుకోండి",
+  "redist.district_required": "ప్రణాళికలను చూడటానికి లేదా రూపొందించడానికి జిల్లాను ఎంచుకోండి.",
 }
 
 const kn = {
@@ -2226,6 +2338,20 @@ const kn = {
   "state.Uttar Pradesh": "ಉತ್ತರ ಪ್ರದೇಶ",
   "state.Uttarakhand": "ಉತ್ತರಾಖಂಡ",
   "state.West Bengal": "ಪಶ್ಚಿಮ ಬಂಗಾಳ",
+  "facilities.state": "ರಾಜ್ಯ",
+  "facilities.district": "ಜಿಲ್ಲೆ",
+  "facilities.type": "ಪ್ರಕಾರ",
+  "facilities.all_states": "ಎಲ್ಲಾ ರಾಜ್ಯಗಳು",
+  "facilities.all_districts": "ಎಲ್ಲಾ ಜಿಲ್ಲೆಗಳು",
+  "facilities.select_prompt": "ಸೌಲಭ್ಯಗಳನ್ನು ಪಟ್ಟಿ ಮಾಡಲು ರಾಜ್ಯ, ಜಿಲ್ಲೆ ಅಥವಾ ಸ್ಥಿತಿ ಫಿಲ್ಟರ್ ಆಯ್ಕೆಮಾಡಿ.",
+  "facilities.col_district": "ಜಿಲ್ಲೆ",
+  "facilities.col_doctors": "ವೈದ್ಯರು",
+  "facilities.col_patients": "ರೋಗಿಗಳು",
+  "facilities.col_stockout": "ಸ್ಟಾಕ್-ಔಟ್ ಸ್ಕೋರ್",
+  "facilities.col_beds": "ಹಾಸಿಗೆಗಳು",
+  "redist.district": "ಜಿಲ್ಲೆ",
+  "redist.select_district": "ಜಿಲ್ಲೆ ಆಯ್ಕೆಮಾಡಿ",
+  "redist.district_required": "ಯೋಜನೆಗಳನ್ನು ವೀಕ್ಷಿಸಲು ಅಥವಾ ರಚಿಸಲು ಜಿಲ್ಲೆ ಆಯ್ಕೆಮಾಡಿ.",
 }
 
 const bn = {
@@ -2473,9 +2599,23 @@ const bn = {
   "state.Uttar Pradesh": "উত্তরপ্রদেশ",
   "state.Uttarakhand": "উত্তরাখণ্ড",
   "state.West Bengal": "পশ্চিমবঙ্গ",
+  "facilities.state": "রাজ্য",
+  "facilities.district": "জেলা",
+  "facilities.type": "ধরন",
+  "facilities.all_states": "সব রাজ্য",
+  "facilities.all_districts": "সব জেলা",
+  "facilities.select_prompt": "সুবিধাগুলির তালিকা দেখতে রাজ্য, জেলা বা স্থিতি ফিল্টার নির্বাচন করুন।",
+  "facilities.col_district": "জেলা",
+  "facilities.col_doctors": "চিকিৎসক",
+  "facilities.col_patients": "রোগী",
+  "facilities.col_stockout": "স্টক-আউট স্কোর",
+  "facilities.col_beds": "শয্যা",
+  "redist.district": "জেলা",
+  "redist.select_district": "জেলা নির্বাচন করুন",
+  "redist.district_required": "পরিকল্পনা দেখতে বা তৈরি করতে একটি জেলা নির্বাচন করুন।",
 }
 
-const SUPPORTED = ['en', 'hi', 'mr', 'gu', 'pa', 'ta', 'ml', 'te', 'kn', 'bn']
+const SUPPORTED = ["en","hi","mr","gu","pa","ta","ml","te","kn","bn"]
 const LANG_KEY = 'smarthealth-lang'
 
 // Persist the chosen language so it survives page reloads / full navigations.

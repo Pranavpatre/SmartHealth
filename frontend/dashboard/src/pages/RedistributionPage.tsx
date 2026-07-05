@@ -8,6 +8,8 @@ import {
   type RedistributionPlan,
   type LineItem,
 } from '../api/redistribution'
+import { getStates, getDistricts } from '../api/facilities'
+import { useAuthStore } from '../stores/authStore'
 import { useTranslation } from 'react-i18next'
 import { formatNumber, formatCurrencyINR, formatRelativeTime } from '../lib/format'
 import clsx from 'clsx'
@@ -72,14 +74,35 @@ export default function RedistributionPage() {
   const [selectedPlan, setSelectedPlan] = useState<RedistributionPlan | null>(null)
   const [deferTarget, setDeferTarget] = useState<string | null>(null)
 
+  // Redistribution is district-scoped. Field/district users are pinned to their
+  // own district (no picker); admins (no home district) must pick one.
+  const role = useAuthStore((s) => s.role)
+  const isAdmin = role === 'SUPERADMIN' || role === 'STATE_ADMIN'
+  const [stateId, setStateId] = useState<number | undefined>()
+  const [districtId, setDistrictId] = useState<number | undefined>()
+
+  const { data: states = [] } = useQuery({
+    queryKey: ['states'],
+    queryFn: getStates,
+    enabled: isAdmin,
+  })
+  const { data: districts = [] } = useQuery({
+    queryKey: ['districts', stateId],
+    queryFn: () => getDistricts(stateId),
+    enabled: isAdmin,
+  })
+
+  const ready = !isAdmin || !!districtId
+
   const { data: plans = [], isLoading } = useQuery({
-    queryKey: ['redistribution-plans'],
-    queryFn: getPlans,
+    queryKey: ['redistribution-plans', districtId],
+    queryFn: () => getPlans(districtId),
     refetchInterval: 60_000,
+    enabled: ready,
   })
 
   const createMutation = useMutation({
-    mutationFn: createPlan,
+    mutationFn: () => createPlan(districtId),
     onSuccess: (newPlan) => {
       qc.invalidateQueries({ queryKey: ['redistribution-plans'] })
       setSelectedPlan(newPlan)
@@ -87,7 +110,7 @@ export default function RedistributionPage() {
   })
 
   const approveMutation = useMutation({
-    mutationFn: approvePlan,
+    mutationFn: (planId: string) => approvePlan(planId, districtId),
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['redistribution-plans'] })
       qc.invalidateQueries({ queryKey: ['facilities'] })
@@ -96,7 +119,7 @@ export default function RedistributionPage() {
   })
 
   const deferMutation = useMutation({
-    mutationFn: ({ planId, reason }: { planId: string; reason: string }) => deferPlan(planId, reason),
+    mutationFn: ({ planId, reason }: { planId: string; reason: string }) => deferPlan(planId, reason, districtId),
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['redistribution-plans'] })
       if (selectedPlan?.id === updated.id) setSelectedPlan(updated)
@@ -128,7 +151,7 @@ export default function RedistributionPage() {
         </div>
         <button
           onClick={() => createMutation.mutate()}
-          disabled={createMutation.isPending}
+          disabled={createMutation.isPending || !ready}
           className="bg-teal-600 text-white font-semibold px-4 py-2.5 rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors text-sm flex items-center gap-2"
         >
           {createMutation.isPending ? (
@@ -145,6 +168,45 @@ export default function RedistributionPage() {
         </button>
       </div>
 
+      {isAdmin && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-wrap gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">{t('facilities.state')}</label>
+            <select
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none min-w-40"
+              value={stateId ?? ''}
+              onChange={(e) => {
+                setStateId(e.target.value ? Number(e.target.value) : undefined)
+                setDistrictId(undefined)
+                setSelectedPlan(null)
+              }}
+            >
+              <option value="">{t('facilities.all_states')}</option>
+              {states.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">{t('redist.district')}</label>
+            <select
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none min-w-40"
+              value={districtId ?? ''}
+              onChange={(e) => {
+                setDistrictId(e.target.value ? Number(e.target.value) : undefined)
+                setSelectedPlan(null)
+              }}
+            >
+              <option value="">{t('redist.select_district')}</option>
+              {districts.map((d) => (<option key={d.id} value={d.id}>{d.name}</option>))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {!ready ? (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center text-gray-400 text-sm">
+          {t('redist.district_required')}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Plans list */}
         <div className="lg:col-span-2 space-y-3">
@@ -298,6 +360,7 @@ export default function RedistributionPage() {
           )}
         </div>
       </div>
+      )}
     </div>
   )
 }

@@ -581,6 +581,153 @@ async def at_risk_facilities(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Geo filter dropdowns + rich facility browse  (must precede /{facility_id})
+# ─────────────────────────────────────────────────────────────────────────────
+
+class GeoOption(BaseModel):
+    id: int
+    name: str
+
+
+@router.get("/geo/states", response_model=list[GeoOption], summary="States for filter dropdown")
+async def list_states(
+    db: AsyncSession = Depends(get_db),
+    current_user: Any = Depends(_field_plus),
+) -> list[GeoOption]:
+    rows = (await db.execute(sa_text("SELECT id, name FROM states ORDER BY name"))).all()
+    return [GeoOption(id=r[0], name=r[1]) for r in rows]
+
+
+@router.get("/geo/districts", response_model=list[GeoOption], summary="Districts (optionally filtered by state)")
+async def list_districts(
+    state_id: int | None = Query(None, description="Filter districts by state"),
+    db: AsyncSession = Depends(get_db),
+    current_user: Any = Depends(_field_plus),
+) -> list[GeoOption]:
+    if state_id is not None:
+        rows = (await db.execute(
+            sa_text("SELECT id, name FROM districts WHERE state_id = :s ORDER BY name"),
+            {"s": state_id},
+        )).all()
+    else:
+        rows = (await db.execute(sa_text("SELECT id, name FROM districts ORDER BY name"))).all()
+    return [GeoOption(id=r[0], name=r[1]) for r in rows]
+
+
+class FacilityBrowseRow(BaseModel):
+    id: uuid.UUID
+    code: str
+    name: str
+    facility_type: str
+    district_name: str | None = None
+    state_name: str | None = None
+    health_score: float | None = None
+    traffic_light: str | None = None      # GREEN | YELLOW | RED
+    stockout_score: float | None = None   # medicine_score (0-100); low = stockout risk
+    doctors_present: int | None = None
+    patients: int | None = None           # latest OPD count
+    beds_occupied: int | None = None
+    bed_capacity: int = 0
+    active_alerts: int = 0
+
+
+class FacilityBrowseResponse(BaseModel):
+    total: int
+    items: list[FacilityBrowseRow]
+
+
+@router.get(
+    "/browse",
+    response_model=FacilityBrowseResponse,
+    summary="Filterable facility list with staffing / stock / beds",
+)
+async def browse_facilities(
+    state_id: int | None = Query(None),
+    district_id: int | None = Query(None),
+    facility_type: str | None = Query(None, description="PHC | CHC | SUB_CENTRE | DISTRICT_HOSPITAL"),
+    status_light: str | None = Query(None, alias="status", description="GREEN | YELLOW | RED"),
+    search: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(500, ge=1, le=2000),
+    db: AsyncSession = Depends(get_db),
+    current_user: Any = Depends(_field_plus),
+) -> FacilityBrowseResponse:
+    """Server-side filtered facility list. Fixes the client-side 1000-row cap
+    (critical facilities were invisible) and adds state/district filters plus
+    per-facility staffing (doctors), footfall (patients), stock-out score and
+    bed occupancy for the browse table."""
+    where: list[str] = []
+    params: dict[str, Any] = {}
+
+    # scope non-privileged users to their own district / facility
+    if current_user.role not in ("STATE_ADMIN", "SUPERADMIN"):
+        if getattr(current_user, "district_id", None) is not None:
+            where.append("f.district_id = :uds"); params["uds"] = current_user.district_id
+        elif getattr(current_user, "facility_id", None) is not None:
+            where.append("f.id = :ufid"); params["ufid"] = current_user.facility_id
+    if state_id is not None:
+        where.append("d.state_id = :sid"); params["sid"] = state_id
+    if district_id is not None:
+        where.append("f.district_id = :did"); params["did"] = district_id
+    if facility_type is not None:
+        where.append("f.facility_type = :ft"); params["ft"] = facility_type.upper()
+    if status_light is not None:
+        where.append("hs.status = :st"); params["st"] = status_light.upper()
+    if search:
+        where.append("f.name ILIKE :q"); params["q"] = f"%{search}%"
+    where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+
+    cte = (
+        "WITH latest_hs AS ("
+        "  SELECT DISTINCT ON (facility_id) facility_id, overall_score, status, medicine_score"
+        "  FROM facility_health_scores ORDER BY facility_id, time DESC), "
+        "latest_snap AS ("
+        "  SELECT DISTINCT ON (facility_id) facility_id, doctors_present, opd_count, beds_occupied"
+        "  FROM daily_snapshots ORDER BY facility_id, time DESC), "
+        "alert_ct AS ("
+        "  SELECT facility_id, count(*) AS c FROM alerts WHERE status = 'OPEN' GROUP BY facility_id) "
+    )
+    joins = (
+        " FROM facilities f"
+        " JOIN districts d ON d.id = f.district_id"
+        " JOIN states s ON s.id = d.state_id"
+        " LEFT JOIN latest_hs hs ON hs.facility_id = f.id"
+        " LEFT JOIN latest_snap snap ON snap.facility_id = f.id"
+        " LEFT JOIN alert_ct al ON al.facility_id = f.id"
+    )
+
+    total = (await db.execute(sa_text(cte + "SELECT count(*)" + joins + where_sql), params)).scalar() or 0
+
+    params["lim"] = page_size
+    params["off"] = (page - 1) * page_size
+    rows = (await db.execute(
+        sa_text(
+            cte
+            + "SELECT f.id, f.code, f.name, f.facility_type, d.name AS district_name, s.name AS state_name, "
+              "hs.overall_score, hs.status, hs.medicine_score, snap.doctors_present, snap.opd_count, "
+              "snap.beds_occupied, f.bed_capacity, al.c"
+            + joins + where_sql
+            + " ORDER BY hs.overall_score ASC NULLS LAST, f.name LIMIT :lim OFFSET :off"
+        ),
+        params,
+    )).all()
+
+    items = [
+        FacilityBrowseRow(
+            id=r[0], code=r[1], name=r[2], facility_type=r[3],
+            district_name=r[4], state_name=r[5],
+            health_score=float(r[6]) if r[6] is not None else None,
+            traffic_light=r[7],
+            stockout_score=float(r[8]) if r[8] is not None else None,
+            doctors_present=r[9], patients=r[10], beds_occupied=r[11],
+            bed_capacity=r[12] or 0, active_alerts=int(r[13] or 0),
+        )
+        for r in rows
+    ]
+    return FacilityBrowseResponse(total=int(total), items=items)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # GET /facilities/{facility_id}
 # ─────────────────────────────────────────────────────────────────────────────
 
