@@ -7,6 +7,7 @@ import NearestFacilities from '../components/NearestFacilities'
 import AlertCard from '../components/AlertCard'
 import { useAlertWebSocket } from '../hooks/useWebSocket'
 import { useTranslation } from 'react-i18next'
+import { formatNumber } from '../lib/format'
 
 export default function DashboardPage() {
   const { t } = useTranslation()
@@ -81,12 +82,12 @@ export default function DashboardPage() {
           },
           {
             label: t('kpi.avg_score'),
-            value: `${avgScore}/100`,
+            value: `${formatNumber(avgScore)}/100`,
             color: scoreColor(avgScore),
           },
           {
             label: t('kpi.facilities'),
-            value: facilityCount.toLocaleString(),
+            value: formatNumber(facilityCount),
             color: 'text-teal-700',
           },
         ].map((kpi) => (
@@ -102,19 +103,19 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <h2 className="font-semibold text-gray-800 mb-3">{t('dashboard.district_map')}</h2>
           {facilitiesLoading ? (
-            <div className="h-96 flex items-center justify-center text-gray-400">Loading map...</div>
+            <div className="h-96 flex items-center justify-center text-gray-400">{t('dashboard.loading_map')}</div>
           ) : (
             <FacilityMap markers={mapMarkers} />
           )}
           <div className="flex gap-4 mt-3 text-xs text-gray-500">
             <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full inline-block bg-green-700"></span> Good (&gt;70)
+              <span className="w-3 h-3 rounded-full inline-block bg-green-700"></span> {t('dashboard.legend_good')}
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full inline-block bg-yellow-700"></span> At Risk (45–70)
+              <span className="w-3 h-3 rounded-full inline-block bg-yellow-700"></span> {t('dashboard.legend_at_risk')}
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full inline-block bg-red-700"></span> Critical (&lt;45)
+              <span className="w-3 h-3 rounded-full inline-block bg-red-700"></span> {t('dashboard.legend_critical')}
             </span>
           </div>
         </div>
@@ -124,13 +125,13 @@ export default function DashboardPage() {
             {t('dashboard.alert_feed')}
             {alerts.length > 0 && (
               <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full">
-                {alerts.length}
+                {formatNumber(alerts.length)}
               </span>
             )}
           </h2>
-          {alertsLoading && <p className="text-gray-400 text-sm">Loading alerts...</p>}
+          {alertsLoading && <p className="text-gray-400 text-sm">{t('dashboard.loading_alerts')}</p>}
           {!alertsLoading && alerts.length === 0 && (
-            <p className="text-green-700 text-sm font-medium">No pending alerts</p>
+            <p className="text-green-700 text-sm font-medium">{t('dashboard.no_alerts')}</p>
           )}
           {alerts
             .slice()
@@ -148,17 +149,17 @@ export default function DashboardPage() {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
         <h2 className="font-semibold text-gray-800 mb-3">{t('dashboard.bottom_facilities')}</h2>
         {atRiskLoading ? (
-          <p className="text-gray-400 text-sm">Loading...</p>
+          <p className="text-gray-400 text-sm">{t('common.loading')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wide border-b border-gray-100">
-                  <th className="pb-2 pr-4">Facility</th>
-                  <th className="pb-2 pr-4">Type</th>
-                  <th className="pb-2 pr-4">Score</th>
-                  <th className="pb-2 pr-4">Status</th>
-                  <th className="pb-2">Alerts</th>
+                  <th className="pb-2 pr-4">{t('dashboard.col_facility')}</th>
+                  <th className="pb-2 pr-4">{t('dashboard.col_type')}</th>
+                  <th className="pb-2 pr-4">{t('dashboard.col_score')}</th>
+                  <th className="pb-2 pr-4">{t('dashboard.col_status')}</th>
+                  <th className="pb-2">{t('dashboard.col_alerts')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -169,23 +170,23 @@ export default function DashboardPage() {
                       <td className="py-2.5 pr-4 text-gray-500">{f.facility_type}</td>
                       <td className="py-2.5 pr-4">
                         <span className={`font-bold ${scoreColor(f.health_score ?? 0)}`}>
-                          {f.health_score}
+                          {formatNumber(f.health_score)}
                         </span>
                         <span className="text-gray-400 text-xs">/100</span>
                       </td>
                       <td className="py-2.5 pr-4 text-lg">
                         {f.traffic_light === 'GREEN' ? (
-                          <span title="Good">&#128994;</span>
+                          <span title={t('status.good')}>&#128994;</span>
                         ) : f.traffic_light === 'YELLOW' ? (
-                          <span title="At Risk">&#128993;</span>
+                          <span title={t('status.at_risk')}>&#128993;</span>
                         ) : (
-                          <span title="Critical">&#128308;</span>
+                          <span title={t('status.critical')}>&#128308;</span>
                         )}
                       </td>
                       <td className="py-2.5">
                         {f.active_alerts > 0 ? (
                           <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full">
-                            {f.active_alerts}
+                            {formatNumber(f.active_alerts)}
                         </span>
                       ) : (
                         <span className="text-gray-400">—</span>

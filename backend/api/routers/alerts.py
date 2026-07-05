@@ -58,6 +58,10 @@ class AlertResponse(BaseModel):
     status: str            # OPEN | ACKNOWLEDGED | RESOLVED | SNOOZED
     title: str
     body: str
+    # Structured translatable alert — dashboard renders these via i18n; falls
+    # back to title/body when absent (older rows).
+    message_key: str | None = None
+    message_params: dict | None = None
     created_at: datetime
     acknowledged_by: uuid.UUID | None
     acknowledged_at: datetime | None
@@ -95,6 +99,8 @@ def _build_alert_response(
         status=alert.status,
         title=alert.title,
         body=alert.body,
+        message_key=alert.message_key,
+        message_params=alert.message_params,
         created_at=alert.created_at,
         acknowledged_by=alert.acknowledged_by,
         acknowledged_at=alert.acknowledged_at,

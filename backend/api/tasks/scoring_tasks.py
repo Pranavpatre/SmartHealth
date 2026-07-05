@@ -328,12 +328,21 @@ def run_anomaly_scan(self) -> dict:
                         ),
                     )
 
+                    anomaly_params = {
+                        "facility": fac_code,
+                        "direction": direction,   # 'spike' | 'drop'
+                        "latest": round(latest),
+                        "mean": round(mean, 1),
+                        "zscore": round(z_score, 2),
+                    }
                     cur.execute(
                         """
                         INSERT INTO alerts (
-                            facility_id, severity, status, title, body
+                            facility_id, severity, status, title, body,
+                            message_key, message_params
                         )
-                        SELECT %s, 'INFO'::alert_severity, 'OPEN', %s, %s
+                        SELECT %s, 'INFO'::alert_severity, 'OPEN', %s, %s,
+                               'alert.anomaly', %s::jsonb
                         WHERE NOT EXISTS (
                             SELECT 1 FROM alerts
                             WHERE facility_id = %s
@@ -350,6 +359,7 @@ def run_anomaly_scan(self) -> dict:
                                 f"{latest:.0f} visits vs {mean:.1f} avg "
                                 f"(z={z_score:.2f}). Review staffing and supplies."
                             ),
+                            json.dumps(anomaly_params),
                             fac_id,
                             f"Anomaly detected: {fac_code}",
                         ),
@@ -406,11 +416,14 @@ def run_attendance_escalation(self) -> dict:
         cur = conn.cursor()
         cur.execute(
             """
-            INSERT INTO alerts (facility_id, severity, status, title, body)
+            INSERT INTO alerts (facility_id, severity, status, title, body,
+                                message_key, message_params)
             SELECT f.id, 'CRITICAL'::alert_severity, 'OPEN',
                    'Zero doctor attendance: ' || f.name,
                    f.name || ' has reported zero on-site attendance for '
-                       || %s || '+ consecutive days. Action recommended.'
+                       || %s || '+ consecutive days. Action recommended.',
+                   'alert.attendance',
+                   jsonb_build_object('facility', f.name, 'days', %s::int)
             FROM facilities f
             WHERE EXISTS (
                     SELECT 1 FROM staff_attendance a WHERE a.facility_id = f.id
@@ -429,7 +442,7 @@ def run_attendance_escalation(self) -> dict:
                       AND al.created_at >= NOW() - INTERVAL '24 hours'
                   )
             """,
-            (days, days),
+            (days, days, days),
         )
         escalated = cur.rowcount
         conn.commit()

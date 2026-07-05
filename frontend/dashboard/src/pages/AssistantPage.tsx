@@ -1,23 +1,27 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { apiClient } from '../api/client'
+import { formatClock } from '../lib/format'
 
 const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English' },
   { code: 'hi', label: 'Hindi' },
   { code: 'mr', label: 'Marathi' },
   { code: 'gu', label: 'Gujarati' },
+  { code: 'pa', label: 'Punjabi' },
   { code: 'ta', label: 'Tamil' },
+  { code: 'ml', label: 'Malayalam' },
   { code: 'te', label: 'Telugu' },
   { code: 'kn', label: 'Kannada' },
   { code: 'bn', label: 'Bengali' },
 ]
 
 const SUGGESTED_QUESTIONS = [
-  'Which PHCs face stockouts this week?',
-  'What is the average district health score?',
-  'Which facility has the most critical alerts?',
-  'List facilities with health score below 45.',
-  'Which medicines are critically low across the district?',
+  'assistant.q1',
+  'assistant.q2',
+  'assistant.q3',
+  'assistant.q4',
+  'assistant.q5',
 ]
 
 interface Message {
@@ -42,11 +46,12 @@ function LoadingDots() {
 }
 
 export default function AssistantPage() {
+  const { t } = useTranslation()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '0',
       role: 'assistant',
-      content: 'Hello! I am the SmartHealth District AI Assistant. Ask me anything about your district\'s health facilities, stock levels, or alerts.',
+      content: t('assistant.greeting'),
       timestamp: new Date(),
     },
   ])
@@ -90,7 +95,7 @@ export default function AssistantPage() {
       const errorMsg: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error processing your question. Please try again.',
+        content: t('assistant.error'),
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, errorMsg])
@@ -107,25 +112,24 @@ export default function AssistantPage() {
     }
   }
 
-  const formatTime = (d: Date) =>
-    d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const formatTime = (d: Date) => formatClock(d)
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">AI Assistant</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Ask questions about your district in natural language</p>
+          <h1 className="text-xl font-bold text-gray-900">{t('assistant.title')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t('assistant.subtitle')}</p>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-500 mr-2">Response language:</label>
+          <label className="text-xs font-medium text-gray-500 mr-2">{t('assistant.response_language')}</label>
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
           >
             {SUPPORTED_LANGUAGES.map((lang) => (
-              <option key={lang.code} value={lang.code}>{lang.label}</option>
+              <option key={lang.code} value={lang.code}>{t('lang.' + lang.code)}</option>
             ))}
           </select>
         </div>
@@ -177,14 +181,14 @@ export default function AssistantPage() {
       {/* Suggested questions */}
       {messages.length <= 1 && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {SUGGESTED_QUESTIONS.map((q) => (
+          {SUGGESTED_QUESTIONS.map((key) => (
             <button
-              key={q}
-              onClick={() => sendMessage(q)}
+              key={key}
+              onClick={() => sendMessage(t(key))}
               disabled={loading}
               className="text-xs bg-white border border-gray-200 rounded-full px-3 py-1.5 text-gray-600 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 transition-colors disabled:opacity-50"
             >
-              {q}
+              {t(key)}
             </button>
           ))}
         </div>
@@ -197,7 +201,7 @@ export default function AssistantPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a question about your district... (Enter to send, Shift+Enter for newline)"
+          placeholder={t('assistant.placeholder')}
           rows={2}
           className="flex-1 resize-none text-sm text-gray-900 placeholder-gray-400 outline-none"
         />
@@ -216,7 +220,7 @@ export default function AssistantPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
           )}
-          Send
+          {t('assistant.send')}
         </button>
       </div>
     </div>

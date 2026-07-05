@@ -1,6 +1,8 @@
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { formatNumber } from '../lib/format'
 import L from 'leaflet'
 import 'leaflet.markercluster'
 import type { MapMarker } from '../api/facilities'
@@ -23,6 +25,7 @@ interface Props {
 function ClusterLayer({ markers }: { markers: MapMarker[] }) {
   const map = useMap()
   const navigate = useNavigate()
+  const { t, i18n } = useTranslation()
 
   useEffect(() => {
     const valid = markers.filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng))
@@ -40,8 +43,8 @@ function ClusterLayer({ markers }: { markers: MapMarker[] }) {
         radius: 6, fillColor: color, color: '#fff', weight: 1.5, fillOpacity: 0.9,
       })
       marker.bindPopup(
-        `<strong>${m.name}</strong><br/>Score: ${m.health_score ?? '—'}/100` +
-        `<br/><a href="/facilities/${m.id}" style="color:#0d9488">View detail →</a>`,
+        `<strong>${m.name}</strong><br/>${t('map.score')}: ${formatNumber(m.health_score)}/100` +
+        `<br/><a href="/facilities/${m.id}" style="color:#0d9488">${t('map.view_detail')}</a>`,
       )
       marker.on('click', () => navigate(`/facilities/${m.id}`))
       return marker
@@ -56,7 +59,7 @@ function ClusterLayer({ markers }: { markers: MapMarker[] }) {
     return () => {
       try { map.removeLayer(group) } catch { /* ignore */ }
     }
-  }, [markers, map, navigate])
+  }, [markers, map, navigate, t, i18n.language])
 
   return null
 }

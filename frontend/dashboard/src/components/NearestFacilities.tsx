@@ -1,6 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { getNearestFacilities, type NearestFacility } from '../api/facilities'
+import { formatNumber, formatDecimal } from '../lib/format'
+
+// Sentinel origin tokens — stored in state, translated at render time.
+const ORIGIN_MY_LOCATION = '__my_location__'
+const ORIGIN_SELECTED = '__selected_location__'
 
 const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
 
@@ -39,6 +45,7 @@ function loadGoogleMaps(key: string): Promise<void> {
 
 export default function NearestFacilities() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [results, setResults] = useState<NearestFacility[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -51,7 +58,7 @@ export default function NearestFacilities() {
     try {
       setResults(await getNearestFacilities(lat, lng, 10))
     } catch {
-      setError('Could not fetch nearest facilities.')
+      setError(t('nearest.err_fetch'))
     } finally {
       setLoading(false)
     }
@@ -59,17 +66,17 @@ export default function NearestFacilities() {
 
   const useMyLocation = () => {
     setError(null)
-    if (!navigator.geolocation) { setError('Geolocation is not available in this browser.'); return }
+    if (!navigator.geolocation) { setError(t('nearest.err_no_geo')); return }
     setLoading(true)
     navigator.geolocation.getCurrentPosition(
-      (pos) => search(pos.coords.latitude, pos.coords.longitude, 'your current location'),
+      (pos) => search(pos.coords.latitude, pos.coords.longitude, ORIGIN_MY_LOCATION),
       (e) => {
         // POSITION_UNAVAILABLE (2) on desktops usually means the high-accuracy
         // fix failed — fall back to a coarse, cached lookup before giving up.
         const msg =
           e.code === e.POSITION_UNAVAILABLE
-            ? 'Could not get a location fix — pick a city or enter coordinates below.'
-            : e.message || 'Location permission denied.'
+            ? t('nearest.err_no_fix')
+            : e.message || t('nearest.err_denied')
         setError(msg)
         setLoading(false)
       },
@@ -81,7 +88,7 @@ export default function NearestFacilities() {
 
   const submitManual = () => {
     const m = manual.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/)
-    if (!m) { setError('Enter coordinates as "lat, lng" — e.g. 18.52, 73.85'); return }
+    if (!m) { setError(t('nearest.err_coords')); return }
     search(parseFloat(m[1]), parseFloat(m[2]), `${m[1]}, ${m[2]}`)
   }
 
@@ -102,50 +109,59 @@ export default function NearestFacilities() {
         ac.addListener('place_changed', () => {
           const place = ac.getPlace()
           const loc = place?.geometry?.location
-          if (loc) search(loc.lat(), loc.lng(), place.formatted_address || 'selected location')
+          if (loc) search(loc.lat(), loc.lng(), place.formatted_address || ORIGIN_SELECTED)
         })
       })
-      .catch(() => setError('Google Maps failed to load — check the API key.'))
+      .catch(() => setError(t('nearest.err_maps_key')))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Resolve a stored origin token to its display string at render time.
+  const displayOrigin = (o: string): string => {
+    if (o === ORIGIN_MY_LOCATION) return t('nearest.your_location')
+    if (o === ORIGIN_SELECTED) return t('nearest.selected_location')
+    const preset = PRESETS.find((p) => p.name === o)
+    if (preset) return t('nearest.city_' + o.toLowerCase())
+    return o
+  }
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-      <h2 className="font-semibold text-gray-800 mb-1">Find Nearest PHCs / CHCs</h2>
+      <h2 className="font-semibold text-gray-800 mb-1">{t('nearest.title')}</h2>
       <p className="text-xs text-gray-400 mb-3">
-        Enter a location or use your device GPS to find the closest facilities.
+        {t('nearest.desc')}
       </p>
 
       <div className="flex flex-col sm:flex-row gap-2 mb-3">
         {GMAPS_KEY ? (
           <input
             ref={inputRef}
-            placeholder="Search a place or address (Google Maps)…"
+            placeholder={t('nearest.search_placeholder')}
             className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
           />
         ) : (
           <p className="flex-1 text-xs text-gray-400 self-center">
-            Set <code>VITE_GOOGLE_MAPS_API_KEY</code> to enable address search. Using GPS for now.
+            {t('nearest.key_help')}
           </p>
         )}
         <button
           onClick={useMyLocation}
           className="bg-teal-600 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors whitespace-nowrap"
         >
-          📍 Use my location
+          {t('nearest.use_location')}
         </button>
       </div>
 
       {/* Keyless fallbacks — no GPS or Maps key needed */}
       <div className="flex flex-wrap items-center gap-1.5 mb-3">
-        <span className="text-xs text-gray-400 mr-1">Quick pick:</span>
+        <span className="text-xs text-gray-400 mr-1">{t('nearest.quick_pick')}</span>
         {PRESETS.map((p) => (
           <button
             key={p.name}
             onClick={() => search(p.lat, p.lng, p.name)}
             className="text-xs border border-gray-200 rounded-full px-2.5 py-1 text-gray-600 hover:bg-teal-50 hover:border-teal-300 transition-colors"
           >
-            {p.name}
+            {t('nearest.city_' + p.name.toLowerCase())}
           </button>
         ))}
       </div>
@@ -155,21 +171,23 @@ export default function NearestFacilities() {
           value={manual}
           onChange={(e) => setManual(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && submitManual()}
-          placeholder="Or enter coordinates: lat, lng"
+          placeholder={t('nearest.coords_placeholder')}
           className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
         />
         <button
           onClick={submitManual}
           className="border border-gray-200 text-gray-600 text-sm py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors"
         >
-          Go
+          {t('nearest.go')}
         </button>
       </div>
 
-      {loading && <p className="text-gray-400 text-sm">Finding nearest facilities…</p>}
+      {loading && <p className="text-gray-400 text-sm">{t('nearest.finding')}</p>}
       {error && <p className="text-red-500 text-sm">{error}</p>}
       {origin && !loading && !error && (
-        <p className="text-xs text-gray-500 mb-2">Nearest to <span className="font-medium">{origin}</span>:</p>
+        <p className="text-xs text-gray-500 mb-2">
+          {t('nearest.nearest_to', { origin: displayOrigin(origin) })}
+        </p>
       )}
 
       {results.length > 0 && (
@@ -186,11 +204,11 @@ export default function NearestFacilities() {
                 </p>
                 <p className="text-xs text-gray-500">
                   {f.facility_type} · {f.district_name}
-                  {f.health_score != null && ` · score ${f.health_score}`}
+                  {f.health_score != null && ` · ${t('nearest.score')} ${formatNumber(f.health_score)}`}
                 </p>
               </div>
               <span className="text-sm font-bold text-teal-700 whitespace-nowrap ml-3">
-                {f.distance_km} km
+                {formatDecimal(f.distance_km, 1)} {t('common.km')}
               </span>
             </li>
           ))}

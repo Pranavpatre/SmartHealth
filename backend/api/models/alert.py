@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db import Base
@@ -33,6 +33,11 @@ class Alert(Base):
     )
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
+    # Structured, translatable alert. title/body remain the English fallback
+    # (and feed the WhatsApp/SMS path); the dashboard renders message_key with
+    # message_params via i18n so the alert text localizes.
+    message_key: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    message_params: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

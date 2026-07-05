@@ -202,13 +202,26 @@ def run_district_prediction_scan(self) -> dict:
                             f"Confidence: {confidence:.0%}."
                         )
 
+                        # Structured params so the dashboard can localize (i18n
+                        # key alert.stockout). Names stay as-is (English data).
+                        alert_params = {
+                            "facility": fac_name,
+                            "medicine": med_name,
+                            "days": days_until_stockout,
+                            "stock": current_stock,
+                            "reorder": reorder_level,
+                            "confidence": round(confidence * 100),
+                        }
+
                         # Insert only if no OPEN alert for same facility+medicine
                         cur.execute(
                             """
                             INSERT INTO alerts (
-                                facility_id, severity, status, title, body
+                                facility_id, severity, status, title, body,
+                                message_key, message_params
                             )
-                            SELECT %s, %s::alert_severity, 'OPEN', %s, %s
+                            SELECT %s, %s::alert_severity, 'OPEN', %s, %s,
+                                   'alert.stockout', %s::jsonb
                             WHERE NOT EXISTS (
                                 SELECT 1 FROM alerts
                                 WHERE facility_id = %s
@@ -218,6 +231,7 @@ def run_district_prediction_scan(self) -> dict:
                             """,
                             (
                                 fac_id, severity, alert_title, alert_body,
+                                json.dumps(alert_params),
                                 fac_id, alert_title,
                             ),
                         )

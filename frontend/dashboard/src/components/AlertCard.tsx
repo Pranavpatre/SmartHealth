@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { acknowledgeAlert, type Alert } from '../api/alerts'
 import { approvePlan, deferPlan } from '../api/redistribution'
+import { formatNumber } from '../lib/format'
 import clsx from 'clsx'
 
 const SEVERITY_COLOR: Record<string, string> = {
@@ -23,6 +25,23 @@ interface Props {
 
 export default function AlertCard({ alert, planId }: Props) {
   const qc = useQueryClient()
+  const { t } = useTranslation()
+
+  // Render the alert from its structured message_key + params (localizable),
+  // formatting numeric params to the active locale's numerals and translating
+  // the anomaly direction word. Falls back to the English title/body for older
+  // rows that predate structured alerts.
+  const localized = (field: 'title' | 'body') => {
+    const fallback = field === 'title' ? alert.title : alert.body
+    if (!alert.message_key) return fallback
+    const raw = alert.message_params ?? {}
+    const params: Record<string, string> = {}
+    for (const [k, v] of Object.entries(raw)) {
+      params[k] = typeof v === 'number' ? formatNumber(v) : String(v)
+    }
+    if (raw.direction != null) params.direction = t(`alert.dir_${raw.direction}`)
+    return t(`${alert.message_key}.${field}`, { ...params, defaultValue: fallback })
+  }
 
   const ackMutation = useMutation({
     mutationFn: () => acknowledgeAlert(alert.id),
@@ -53,12 +72,13 @@ export default function AlertCard({ alert, planId }: Props) {
             </span>
             <span className="text-xs text-gray-500 truncate">{alert.facility_name}</span>
           </div>
-          <p className="font-semibold text-sm text-gray-900">{alert.title}</p>
-          <p className="text-xs text-gray-600 mt-1">{alert.body}</p>
+          <p className="font-semibold text-sm text-gray-900">{localized('title')}</p>
+          <p className="text-xs text-gray-600 mt-1">{localized('body')}</p>
           {alert.days_until_stockout != null && (
             <p className="text-xs font-medium text-red-700 mt-1">
-              {alert.days_until_stockout} day(s) until stockout
-              {alert.confidence != null && ` · ${Math.round(alert.confidence * 100)}% confidence`}
+              {t('alert.days_until_stockout', { days: formatNumber(alert.days_until_stockout) })}
+              {alert.confidence != null &&
+                ` · ${t('alert.confidence', { pct: formatNumber(Math.round(alert.confidence * 100)) })}`}
             </p>
           )}
         </div>
@@ -71,7 +91,7 @@ export default function AlertCard({ alert, planId }: Props) {
               disabled={approveMutation.isPending}
               className="flex-1 bg-teal-600 text-white text-xs font-semibold py-1.5 px-3 rounded-md hover:bg-teal-700 disabled:opacity-50 transition-colors"
             >
-              {approveMutation.isPending ? '...' : 'Approve Transfer'}
+              {approveMutation.isPending ? '...' : t('alert.approve_transfer')}
             </button>
           )}
           {planId ? (
@@ -80,7 +100,7 @@ export default function AlertCard({ alert, planId }: Props) {
               disabled={deferMutation.isPending}
               className="flex-1 bg-white text-gray-700 text-xs font-semibold py-1.5 px-3 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
-              Defer
+              {t('alert.defer')}
             </button>
           ) : (
             <button
@@ -88,7 +108,7 @@ export default function AlertCard({ alert, planId }: Props) {
               disabled={ackMutation.isPending}
               className="flex-1 bg-white text-gray-700 text-xs font-semibold py-1.5 px-3 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
-              {ackMutation.isPending ? '...' : 'Acknowledge'}
+              {ackMutation.isPending ? '...' : t('alert.acknowledge')}
             </button>
           )}
         </div>

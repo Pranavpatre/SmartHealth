@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../stores/authStore'
 
 export default function LoginPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
   const [phone, setPhone] = useState('')
@@ -19,7 +21,7 @@ export default function LoginPage() {
       await apiClient.post('/auth/otp/request', { phone })
       setStep('otp')
     } catch {
-      setError('Failed to send OTP. Check your phone number.')
+      setError(t('login.err_send'))
     } finally {
       setLoading(false)
     }
@@ -45,7 +47,7 @@ export default function LoginPage() {
       })
       navigate('/dashboard')
     } catch {
-      setError('Invalid OTP. Please try again.')
+      setError(t('login.err_invalid'))
     } finally {
       setLoading(false)
     }
@@ -61,7 +63,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-teal-700">SmartHealth</h1>
-          <p className="text-gray-500 text-sm mt-1">District Health Operating System</p>
+          <p className="text-gray-500 text-sm mt-1">{t('login.tagline')}</p>
         </div>
 
         {error && (
@@ -74,14 +76,14 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone Number
+                {t('login.phone_label')}
               </label>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && phone && requestOtp()}
-                placeholder="+91 98765 43210"
+                placeholder={t('login.phone_placeholder')}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-shadow"
               />
             </div>
@@ -90,23 +92,23 @@ export default function LoginPage() {
               disabled={loading || !phone}
               className="w-full bg-teal-600 text-white font-semibold py-2.5 rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Sending...' : 'Send OTP'}
+              {loading ? t('login.sending') : t('login.send_otp')}
             </button>
             <p className="text-xs text-center text-gray-400">
-              You will receive a 6-digit OTP via SMS
+              {t('login.otp_help')}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-gray-600 text-center">
-              Enter the OTP sent to <span className="font-medium">{phone}</span>
+              {t('login.enter_otp', { phone })}
             </p>
             <input
               type="text"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
               onKeyDown={(e) => e.key === 'Enter' && otp.length >= 6 && verifyOtp()}
-              placeholder="000000"
+              placeholder={t('login.otp_placeholder')}
               maxLength={6}
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-center tracking-[0.5em] font-mono focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-shadow"
             />
@@ -115,13 +117,13 @@ export default function LoginPage() {
               disabled={loading || otp.length < 6}
               className="w-full bg-teal-600 text-white font-semibold py-2.5 rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Verifying...' : 'Login'}
+              {loading ? t('login.verifying') : t('login.login')}
             </button>
             <button
               onClick={() => { setStep('phone'); setOtp(''); setError('') }}
               className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
-              Change number
+              {t('login.change_number')}
             </button>
           </div>
         )}
