@@ -7,6 +7,7 @@ import FacilityDetailPage from './pages/FacilityDetailPage'
 import RedistributionPage from './pages/RedistributionPage'
 import AssistantPage from './pages/AssistantPage'
 import MyFacilityPage from './pages/MyFacilityPage'
+import DiagnosticsPage from './pages/DiagnosticsPage'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="redistribution" element={<RedistributionPage />} />
         <Route path="assistant" element={<AssistantPage />} />
         <Route path="my-facility" element={<MyFacilityPage />} />
+        <Route path="diagnostics" element={<DiagnosticsPage />} />
       </Route>
     </Routes>
   )

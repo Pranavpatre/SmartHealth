@@ -44,6 +44,7 @@ export default function Layout() {
             </>
           )}
           <NavLink to="/assistant" className={navClass}>{t('nav.assistant')}</NavLink>
+          <NavLink to="/diagnostics" className={navClass}>Diagnostics</NavLink>
         </div>
         <div className="flex items-center gap-3">
           {/* Language switcher */}
