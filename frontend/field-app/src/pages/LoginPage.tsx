@@ -99,9 +99,6 @@ export default function LoginPage() {
                 Phone Number
               </label>
               <div className="flex">
-                <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-gray-200 bg-gray-50 text-gray-500 text-sm">
-                  +91
-                </span>
                 <input
                   id="phone"
                   type="tel"
@@ -110,7 +107,7 @@ export default function LoginPage() {
                   value={phone}
                   onChange={(e) => { setPhone(e.target.value.replace(/\D/g, '')); setError(null) }}
                   placeholder="9876543210"
-                  className="flex-1 border border-gray-200 rounded-r-xl px-4 py-3 text-lg font-medium focus:outline-none focus:border-teal-500 transition-colors"
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-lg font-medium focus:outline-none focus:border-teal-500 transition-colors"
                   autoFocus
                 />
               </div>
@@ -131,7 +128,7 @@ export default function LoginPage() {
             <div className="space-y-1">
               <h2 className="text-lg font-bold text-gray-800">Enter OTP</h2>
               <p className="text-sm text-gray-500">
-                Sent to +91 {phone}{' '}
+                Sent to {phone}{' '}
                 <button
                   type="button"
                   onClick={() => { setStep('phone'); setOtp(['','','','','','']); setError(null) }}
