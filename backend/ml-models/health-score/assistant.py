@@ -28,7 +28,7 @@ SUPPORTED_LANGUAGES = {
 }
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # Fallback messages in all supported languages for when the API is unavailable.
 _FALLBACK_MESSAGES: dict[str, str] = {

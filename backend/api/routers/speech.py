@@ -35,7 +35,7 @@ _any_user = require_role(
 )
 
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
-STT_MODEL = "gemini-2.0-flash"              # multimodal audio understanding
+STT_MODEL = "gemini-2.5-flash"              # multimodal audio understanding
 TTS_MODEL = "gemini-2.5-flash-preview-tts"  # native text-to-speech
 TTS_VOICE = "Kore"                          # prebuilt multilingual voice
 
