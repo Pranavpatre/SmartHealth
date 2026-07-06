@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { getFacility, getFacilityAttendance, getFacilityBeds, getFacilityTests, getDemandForecast, type StockItem } from '../api/facilities'
 import type { Alert } from '../api/alerts'
 import { formatNumber, formatDecimal, formatRelativeTime } from '../lib/format'
+import DataBadge from '../components/DataBadge'
 
 const SEVERITY_BADGE: Record<string, string> = {
   CRITICAL: 'bg-red-100 text-red-800',
@@ -152,7 +153,7 @@ export default function FacilityDetailPage() {
       {/* Score breakdown */}
       {Object.keys(breakdown).length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <h2 className="font-semibold text-gray-800 mb-4">{t('detail.score_breakdown')}</h2>
+          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">{t('detail.score_breakdown')} <DataBadge variant="simulated" /></h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {Object.entries(breakdown).map(([key, val]) => (
               <div key={key} className="text-center">
@@ -167,7 +168,7 @@ export default function FacilityDetailPage() {
       {/* Staff attendance (geofenced) */}
       {attendance && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <h2 className="font-semibold text-gray-800 mb-3">{t('detail.attendance_title')}</h2>
+          <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">{t('detail.attendance_title')} <DataBadge variant="simulated" /></h2>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <p className="text-xs text-gray-500">{t('detail.onsite_today')}</p>
@@ -197,8 +198,8 @@ export default function FacilityDetailPage() {
       {/* Epidemiological demand forecast */}
       {demandForecast.length > 0 && (
         <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
-          <h2 className="font-semibold text-amber-900 mb-1">
-            {t('detail.forecast_title')}
+          <h2 className="font-semibold text-amber-900 mb-1 flex items-center gap-2">
+            {t('detail.forecast_title')} <DataBadge variant="simulated" />
           </h2>
           <p className="text-xs text-amber-700 mb-3">
             {t('detail.forecast_desc')}
@@ -228,12 +229,15 @@ export default function FacilityDetailPage() {
         facility.real_district_fully_immunized_annual != null ||
         facility.real_district_institutional_deliveries_annual != null) && (
         <div className="bg-teal-50 rounded-xl border border-teal-200 p-4">
-          <p className="text-xs font-medium text-teal-700 uppercase tracking-wide mb-2">
-            {t('detail.hmis_caption', {
-              period: facility.real_district_hmis_period || facility.real_district_opd_period,
-              district: facility.district_name,
-            })}
-          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-xs font-medium text-teal-700 uppercase tracking-wide">
+              {t('detail.hmis_caption', {
+                period: facility.real_district_hmis_period || facility.real_district_opd_period,
+                district: facility.district_name,
+              })}
+            </p>
+            <DataBadge variant="real" />
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {facility.real_district_opd_annual != null && (
               <div>
@@ -276,7 +280,7 @@ export default function FacilityDetailPage() {
       {/* Bed Matrix */}
       {bedMatrix && bedMatrix.beds.some((b) => b.total_beds > 0) && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <h2 className="font-semibold text-gray-800 mb-3">{t('detail.bed_matrix')}</h2>
+          <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">{t('detail.bed_matrix')} <DataBadge variant="simulated" /></h2>
           <div className="grid grid-cols-3 gap-4">
             {bedMatrix.beds.map((b) => {
               const occ = b.total_beds > 0 ? b.occupied_beds / b.total_beds : 0
@@ -299,8 +303,9 @@ export default function FacilityDetailPage() {
       {/* Test Availability */}
       {testChecklist && testChecklist.tests.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <h2 className="font-semibold text-gray-800 mb-3">
+          <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
             {t('detail.test_availability')}
+            <DataBadge variant="simulated" />
             {testChecklist.tests.some((test) => !test.available) && (
               <span className="ml-2 text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
                 {t('detail.unavailable', { count: formatNumber(testChecklist.tests.filter((test) => !test.available).length) as unknown as number })}
@@ -325,7 +330,7 @@ export default function FacilityDetailPage() {
 
       {/* Stock table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <h2 className="font-semibold text-gray-800 mb-3">{t('detail.stock_summary')}</h2>
+        <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">{t('detail.stock_summary')} <DataBadge variant="simulated" /></h2>
         {stockSummary.length === 0 ? (
           <p className="text-gray-400 text-sm">{t('detail.no_stock')}</p>
         ) : (

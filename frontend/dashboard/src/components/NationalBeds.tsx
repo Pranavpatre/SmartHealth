@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { getStateInfrastructure, getNationalSummary } from '../api/overview'
 import { formatNumber } from '../lib/format'
+import DataBadge from './DataBadge'
 
 export default function NationalBeds() {
   const { t } = useTranslation()
@@ -33,7 +34,7 @@ export default function NationalBeds() {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
       <div className="flex items-baseline justify-between mb-3">
-        <h2 className="font-semibold text-gray-800">{t('beds.title')}</h2>
+        <h2 className="font-semibold text-gray-800 flex items-center gap-2">{t('beds.title')} <DataBadge variant="real" /></h2>
         <span className="text-xs text-gray-400">
           {t('beds.source')}
           {summary?.as_on_date ? ` · ${t('beds.as_on', { date: summary.as_on_date })}` : ''}

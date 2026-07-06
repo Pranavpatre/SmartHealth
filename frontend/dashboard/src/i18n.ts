@@ -266,6 +266,10 @@ const en = {
   "redist.district_required": "Select a district to view or generate plans.",
   "assistant.mic": "Speak",
   "assistant.voice_unavailable": "Voice input unavailable.",
+  "badge.real": "Real data",
+  "badge.simulated": "Demo data",
+  "badge.real_source": "Fetched from data.gov.in / PMGSY (Government of India)",
+  "badge.sim_source": "Synthetic demo data, not from a live source",
 }
 
 const hi = {
@@ -529,6 +533,10 @@ const hi = {
   "redist.district_required": "योजनाएँ देखने या बनाने के लिए ज़िला चुनें।",
   "assistant.mic": "बोलें",
   "assistant.voice_unavailable": "आवाज़ इनपुट उपलब्ध नहीं है।",
+  "badge.real": "वास्तविक डेटा",
+  "badge.simulated": "डेमो डेटा",
+  "badge.real_source": "data.gov.in / PMGSY (भारत सरकार) से प्राप्त",
+  "badge.sim_source": "कृत्रिम डेमो डेटा, किसी सजीव स्रोत से नहीं",
 }
 
 const mr = {
@@ -792,6 +800,10 @@ const mr = {
   "redist.district_required": "योजना पाहण्यासाठी किंवा तयार करण्यासाठी जिल्हा निवडा.",
   "assistant.mic": "बोला",
   "assistant.voice_unavailable": "आवाज इनपुट उपलब्ध नाही.",
+  "badge.real": "वास्तविक डेटा",
+  "badge.simulated": "डेमो डेटा",
+  "badge.real_source": "data.gov.in / PMGSY (भारत सरकार) कडून प्राप्त",
+  "badge.sim_source": "कृत्रिम डेमो डेटा, थेट स्रोतातून नाही",
 }
 
 const gu = {
@@ -1055,6 +1067,10 @@ const gu = {
   "redist.district_required": "યોજનાઓ જોવા અથવા બનાવવા માટે જિલ્લો પસંદ કરો.",
   "assistant.mic": "બોલો",
   "assistant.voice_unavailable": "વૉઇસ ઇનપુટ ઉપલબ્ધ નથી.",
+  "badge.real": "વાસ્તવિક ડેટા",
+  "badge.simulated": "ડેમો ડેટા",
+  "badge.real_source": "data.gov.in / PMGSY (ભારત સરકાર) માંથી મેળવેલ",
+  "badge.sim_source": "કૃત્રિમ ડેમો ડેટા, જીવંત સ્રોતમાંથી નહીં",
 }
 
 const pa = {
@@ -1318,6 +1334,10 @@ const pa = {
   "redist.district_required": "ਯੋਜਨਾਵਾਂ ਵੇਖਣ ਜਾਂ ਬਣਾਉਣ ਲਈ ਜ਼ਿਲ੍ਹਾ ਚੁਣੋ।",
   "assistant.mic": "ਬੋਲੋ",
   "assistant.voice_unavailable": "ਆਵਾਜ਼ ਇਨਪੁੱਟ ਉਪਲਬਧ ਨਹੀਂ।",
+  "badge.real": "ਅਸਲ ਡਾਟਾ",
+  "badge.simulated": "ਡੈਮੋ ਡਾਟਾ",
+  "badge.real_source": "data.gov.in / PMGSY (ਭਾਰਤ ਸਰਕਾਰ) ਤੋਂ ਪ੍ਰਾਪਤ",
+  "badge.sim_source": "ਬਣਾਵਟੀ ਡੈਮੋ ਡਾਟਾ, ਕਿਸੇ ਲਾਈਵ ਸਰੋਤ ਤੋਂ ਨਹੀਂ",
 }
 
 const ta = {
@@ -1581,6 +1601,10 @@ const ta = {
   "redist.district_required": "திட்டங்களைப் பார்க்க அல்லது உருவாக்க மாவட்டத்தைத் தேர்ந்தெடுக்கவும்.",
   "assistant.mic": "பேசு",
   "assistant.voice_unavailable": "குரல் உள்ளீடு கிடைக்கவில்லை.",
+  "badge.real": "உண்மையான தரவு",
+  "badge.simulated": "டெமோ தரவு",
+  "badge.real_source": "data.gov.in / PMGSY (இந்திய அரசு) இலிருந்து பெறப்பட்டது",
+  "badge.sim_source": "செயற்கை டெமோ தரவு, நேரடி மூலத்திலிருந்து அல்ல",
 }
 
 const ml = {
@@ -1844,6 +1868,10 @@ const ml = {
   "redist.district_required": "പദ്ധതികൾ കാണാനോ തയ്യാറാക്കാനോ ജില്ല തിരഞ്ഞെടുക്കുക.",
   "assistant.mic": "സംസാരിക്കുക",
   "assistant.voice_unavailable": "ശബ്ദ ഇൻപുട്ട് ലഭ്യമല്ല.",
+  "badge.real": "യഥാർത്ഥ ഡാറ്റ",
+  "badge.simulated": "ഡെമോ ഡാറ്റ",
+  "badge.real_source": "data.gov.in / PMGSY (ഇന്ത്യാ ഗവൺമെന്റ്) ൽ നിന്ന് ലഭിച്ചത്",
+  "badge.sim_source": "കൃത്രിമ ഡെമോ ഡാറ്റ, തത്സമയ ഉറവിടത്തിൽ നിന്നല്ല",
 }
 
 const te = {
@@ -2107,6 +2135,10 @@ const te = {
   "redist.district_required": "ప్రణాళికలను చూడటానికి లేదా రూపొందించడానికి జిల్లాను ఎంచుకోండి.",
   "assistant.mic": "మాట్లాడండి",
   "assistant.voice_unavailable": "వాయిస్ ఇన్‌పుట్ అందుబాటులో లేదు.",
+  "badge.real": "వాస్తవ డేటా",
+  "badge.simulated": "డెమో డేటా",
+  "badge.real_source": "data.gov.in / PMGSY (భారత ప్రభుత్వం) నుండి పొందబడింది",
+  "badge.sim_source": "కృత్రిమ డెమో డేటా, ప్రత్యక్ష మూలం నుండి కాదు",
 }
 
 const kn = {
@@ -2370,6 +2402,10 @@ const kn = {
   "redist.district_required": "ಯೋಜನೆಗಳನ್ನು ವೀಕ್ಷಿಸಲು ಅಥವಾ ರಚಿಸಲು ಜಿಲ್ಲೆ ಆಯ್ಕೆಮಾಡಿ.",
   "assistant.mic": "ಮಾತನಾಡಿ",
   "assistant.voice_unavailable": "ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಲಭ್ಯವಿಲ್ಲ.",
+  "badge.real": "ನೈಜ ಡೇಟಾ",
+  "badge.simulated": "ಡೆಮೊ ಡೇಟಾ",
+  "badge.real_source": "data.gov.in / PMGSY (ಭಾರತ ಸರ್ಕಾರ) ದಿಂದ ಪಡೆಯಲಾಗಿದೆ",
+  "badge.sim_source": "ಕೃತಕ ಡೆಮೊ ಡೇಟಾ, ನೇರ ಮೂಲದಿಂದ ಅಲ್ಲ",
 }
 
 const bn = {
@@ -2633,6 +2669,10 @@ const bn = {
   "redist.district_required": "পরিকল্পনা দেখতে বা তৈরি করতে একটি জেলা নির্বাচন করুন।",
   "assistant.mic": "বলুন",
   "assistant.voice_unavailable": "ভয়েস ইনপুট উপলব্ধ নেই।",
+  "badge.real": "প্রকৃত ডেটা",
+  "badge.simulated": "ডেমো ডেটা",
+  "badge.real_source": "data.gov.in / PMGSY (ভারত সরকার) থেকে সংগৃহীত",
+  "badge.sim_source": "কৃত্রিম ডেমো ডেটা, সরাসরি উৎস থেকে নয়",
 }
 
 const SUPPORTED = ["en","hi","mr","gu","pa","ta","ml","te","kn","bn"]

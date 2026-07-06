@@ -5,6 +5,7 @@ import FacilityMap from '../components/FacilityMap'
 import NationalBeds from '../components/NationalBeds'
 import NearestFacilities from '../components/NearestFacilities'
 import AlertCard from '../components/AlertCard'
+import DataBadge from '../components/DataBadge'
 import { useAlertWebSocket } from '../hooks/useWebSocket'
 import { useTranslation } from 'react-i18next'
 import { formatNumber } from '../lib/format'
@@ -128,6 +129,7 @@ export default function DashboardPage() {
                 {formatNumber(alerts.length)}
               </span>
             )}
+            <DataBadge variant="simulated" />
           </h2>
           {alertsLoading && <p className="text-gray-400 text-sm">{t('dashboard.loading_alerts')}</p>}
           {!alertsLoading && alerts.length === 0 && (
