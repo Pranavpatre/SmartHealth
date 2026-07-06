@@ -1,0 +1,63 @@
+name: Deploy Frontends to Firebase Hosting
+
+# Builds the dashboard + field-app and deploys both to their Firebase Hosting
+# sites (predicare-dashboard, predicare-field-app) on every push to main.
+# Uses the hosting targets already defined in firebase.json / .firebaserc
+# (project smart-health-d27c9).
+#
+# Required GitHub config (Settings → Secrets and variables → Actions):
+#   Variables:
+#     VITE_API_URL   public URL of the deployed backend API (NO trailing /api/v1)
+#   Secrets:
+#     FIREBASE_SERVICE_ACCOUNT   JSON for a service account with the
+#                                "Firebase Hosting Admin" role (paste the whole file)
+#     VITE_GOOGLE_MAPS_API_KEY   (optional) enables address search on the dashboard map
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.github/workflows/firebase-hosting.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: firebase-hosting
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & deploy
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_PROJECT_ID: smart-health-d27c9
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build dashboard
+        working-directory: frontend/dashboard
+        run: npm ci && npm run build
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+
+      - name: Build field-app
+        working-directory: frontend/field-app
+        run: npm ci && npm run build
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+
+      - name: Deploy to Firebase Hosting
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npx --yes firebase-tools@13 deploy --only hosting \
+            --project "$FIREBASE_PROJECT_ID" --non-interactive
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
