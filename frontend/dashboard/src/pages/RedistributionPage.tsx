@@ -233,12 +233,20 @@ export default function RedistributionPage() {
                   <span className={clsx('text-xs font-bold px-2 py-0.5 rounded-full', STATUS_BADGE[plan.status])}>
                     {plan.status}
                   </span>
-                  <p className="text-sm font-semibold text-gray-900 mt-1.5">
-                    {t('redist.transfers', { count: plan.total_items })}
-                  </p>
-                  <p className="text-xs text-green-700 font-medium mt-0.5">
-                    {t('redist.saves', { amount: formatCurrencyINR(plan.estimated_saving_inr) })}
-                  </p>
+                  {plan.total_items === 0 ? (
+                    <p className="text-sm font-medium text-gray-500 mt-1.5">
+                      {t('redist.no_action')}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold text-gray-900 mt-1.5">
+                        {t('redist.transfers', { count: plan.total_items })}
+                      </p>
+                      <p className="text-xs text-green-700 font-medium mt-0.5">
+                        {t('redist.saves', { amount: formatCurrencyINR(plan.estimated_saving_inr) })}
+                      </p>
+                    </>
+                  )}
                 </div>
                 <p className="text-xs text-gray-400 shrink-0">
                   {formatRelativeTime(new Date(plan.created_at))}
@@ -286,7 +294,9 @@ export default function RedistributionPage() {
                     </span>
                   </h2>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {t('redist.transfers_savings', { count: activePlan.total_items, amount: formatCurrencyINR(activePlan.estimated_saving_inr) })}
+                    {activePlan.total_items === 0
+                      ? t('redist.no_action')
+                      : t('redist.transfers_savings', { count: activePlan.total_items, amount: formatCurrencyINR(activePlan.estimated_saving_inr) })}
                   </p>
                 </div>
                 {activePlan.status === 'PENDING' && (
@@ -309,7 +319,14 @@ export default function RedistributionPage() {
               </div>
 
               {activePlan.line_items.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-8">{t('redist.no_items')}</p>
+                <div className="text-center py-10">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-50 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-medium text-gray-700">{t('redist.no_action')}</p>
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
