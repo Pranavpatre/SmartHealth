@@ -2,11 +2,12 @@
 Redistribution router — Resource redistribution plans for district health facilities.
 
 Endpoints:
-  GET  /redistribution/plans               list plans (district-scoped, paginated, filterable by status)
-  POST /redistribution/plans               run solver, persist + return new plan
-  GET  /redistribution/plans/{plan_id}     full plan detail with line items + names
-  POST /redistribution/plans/{plan_id}/approve   approve plan, queue notifications, broadcast WS
-  POST /redistribution/plans/{plan_id}/defer     defer plan with reason
+  GET  /redistribution/plans               list plans — district-scoped for DISTRICT_OFFICER+,
+                                            facility-scoped (own facility only) for PHC_ADMIN
+  POST /redistribution/plans               run solver, persist + return new plan (DISTRICT_OFFICER+ only)
+  GET  /redistribution/plans/{plan_id}     full plan detail with line items + names (same scoping as list)
+  POST /redistribution/plans/{plan_id}/approve   approve plan, queue notifications, broadcast WS (DISTRICT_OFFICER+ only)
+  POST /redistribution/plans/{plan_id}/defer     defer plan with reason (DISTRICT_OFFICER+ only)
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ from typing import Optional
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.rbac import require_role
@@ -36,6 +37,12 @@ from models.user import User
 log = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/redistribution", tags=["redistribution"])
+
+# Read endpoints also allow PHC_ADMIN, scoped to plans involving their own
+# facility. create/approve/defer remain DISTRICT_OFFICER+ only — a plan can
+# span multiple facilities and there's no per-facility partial-approval
+# concept in the schema, so approval stays a district-level decision.
+_phc_plus = require_role("PHC_ADMIN", "DISTRICT_OFFICER", "STATE_ADMIN", "SUPERADMIN")
 
 # ---------------------------------------------------------------------------
 # Pydantic schemas
@@ -193,6 +200,46 @@ async def _load_plan_or_404(
     return plan, items
 
 
+async def _load_plan_for_facility_or_404(
+    plan_id: uuid.UUID,
+    facility_id: uuid.UUID,
+    db: AsyncSession,
+) -> tuple[RedistributionPlan, list[RedistributionItem]]:
+    """Same as _load_plan_or_404, but for PHC_ADMIN: scoped to a single
+    facility (as donor or receiver) instead of a whole district, since a
+    PHC_ADMIN account may not have a district_id at all."""
+    items_result = await db.execute(
+        select(RedistributionItem).where(
+            RedistributionItem.plan_id == plan_id,
+            or_(
+                RedistributionItem.from_facility == facility_id,
+                RedistributionItem.to_facility == facility_id,
+            ),
+        )
+    )
+    matching_items = list(items_result.scalars().all())
+    if not matching_items:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Redistribution plan {plan_id} not found",
+        )
+
+    plan_result = await db.execute(
+        select(RedistributionPlan).where(RedistributionPlan.id == plan_id)
+    )
+    plan = plan_result.scalar_one_or_none()
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Redistribution plan {plan_id} not found",
+        )
+
+    # Only the line items touching this facility — a plan can span many
+    # facilities in the district, and PHC_ADMIN shouldn't see stock/quantity
+    # details for facilities that aren't theirs.
+    return plan, matching_items
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -218,15 +265,44 @@ async def list_plans(
     page_size: int = 20,
     status_filter: Optional[str] = None,
     district_id: Optional[int] = None,
-    current_user: User = Depends(require_role("DISTRICT_OFFICER")),
+    current_user: User = Depends(_phc_plus),
     db: AsyncSession = Depends(get_db),
 ):
-    """List redistribution plans for the current user's district, paginated."""
-    district_id = _effective_district(current_user, district_id)
+    """
+    List redistribution plans, paginated.
 
-    stmt = select(RedistributionPlan).where(
-        RedistributionPlan.district_id == district_id
-    )
+    DISTRICT_OFFICER+ see every plan in their district (admins with no home
+    district — STATE_ADMIN/SUPERADMIN — must pass ?district_id=). PHC_ADMIN
+    instead see only plans with at least one line item touching their own
+    facility (as donor or receiver) — they have no district_id to scope by,
+    and shouldn't browse the whole district's plans anyway.
+    """
+    is_facility_scoped = current_user.role == "PHC_ADMIN"
+
+    if is_facility_scoped:
+        if not current_user.facility_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User has no associated facility",
+            )
+        facility_id = current_user.facility_id
+        plan_ids_subq = (
+            select(RedistributionItem.plan_id)
+            .where(
+                or_(
+                    RedistributionItem.from_facility == facility_id,
+                    RedistributionItem.to_facility == facility_id,
+                )
+            )
+            .distinct()
+        )
+        stmt = select(RedistributionPlan).where(RedistributionPlan.id.in_(plan_ids_subq))
+    else:
+        district_id = _effective_district(current_user, district_id)
+        stmt = select(RedistributionPlan).where(
+            RedistributionPlan.district_id == district_id
+        )
+
     if status_filter:
         stmt = stmt.where(RedistributionPlan.status == status_filter.upper())
 
@@ -244,12 +320,19 @@ async def list_plans(
     plans_result = await db.execute(stmt)
     plans = list(plans_result.scalars().all())
 
-    # Load items for each plan
+    # Load items for each plan — PHC_ADMIN only sees their own facility's
+    # line items within a plan, not unrelated facilities' stock/quantities.
     plan_responses = []
     for plan in plans:
-        items_result = await db.execute(
-            select(RedistributionItem).where(RedistributionItem.plan_id == plan.id)
-        )
+        items_stmt = select(RedistributionItem).where(RedistributionItem.plan_id == plan.id)
+        if is_facility_scoped:
+            items_stmt = items_stmt.where(
+                or_(
+                    RedistributionItem.from_facility == current_user.facility_id,
+                    RedistributionItem.to_facility == current_user.facility_id,
+                )
+            )
+        items_result = await db.execute(items_stmt)
         items = list(items_result.scalars().all())
         plan_responses.append(await _build_plan_response(plan, items, db))
 
@@ -451,12 +534,28 @@ async def create_plan(
 async def get_plan(
     plan_id: uuid.UUID,
     district_id: Optional[int] = None,
-    current_user: User = Depends(require_role("DISTRICT_OFFICER")),
+    current_user: User = Depends(_phc_plus),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return a single redistribution plan with all line items, facility names, and medicine names."""
-    district_id = _effective_district(current_user, district_id)
-    plan, items = await _load_plan_or_404(plan_id, district_id, db)
+    """
+    Return a single redistribution plan with line items, facility names, and
+    medicine names.
+
+    PHC_ADMIN gets a 404 unless the plan has a line item touching their own
+    facility, and only sees that facility's own line items within it.
+    DISTRICT_OFFICER+ resolve district via _effective_district (admins with
+    no home district must pass ?district_id=).
+    """
+    if current_user.role == "PHC_ADMIN":
+        if not current_user.facility_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User has no associated facility",
+            )
+        plan, items = await _load_plan_for_facility_or_404(plan_id, current_user.facility_id, db)
+    else:
+        district_id = _effective_district(current_user, district_id)
+        plan, items = await _load_plan_or_404(plan_id, district_id, db)
     return await _build_plan_response(plan, items, db)
 
 

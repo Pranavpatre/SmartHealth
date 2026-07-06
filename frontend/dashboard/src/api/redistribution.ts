@@ -92,3 +92,48 @@ export const deferPlan = async (planId: string, reason: string, districtId?: num
   })
   return mapPlan(data)
 }
+
+// ── Facility-scoped view (PHC_ADMIN) ────────────────────────────────────────
+// Mirrors the actual backend response shape for GET /redistribution/plans —
+// a paginated envelope, each plan carrying full LineItemResponse rows (not
+// the flattened LineItem shape RedistributionPage's getPlans() above expects).
+
+export interface FacilityTransferItem {
+  id: string
+  plan_id: string
+  medicine_id: number | null
+  medicine_name: string | null
+  test_id: number | null
+  from_facility: string
+  from_facility_name: string | null
+  to_facility: string
+  to_facility_name: string | null
+  quantity: number
+  distance_km: number | null
+  estimated_cost: number | null
+  estimated_saving: number | null
+  status: string
+  trigger_prediction: string | null
+}
+
+export interface FacilityTransferPlan {
+  id: string
+  district_id: number
+  generated_at: string
+  approved_by: string | null
+  approved_at: string | null
+  status: 'PENDING' | 'APPROVED' | 'DEFERRED'
+  total_savings: number | null
+  notes: string | null
+  items: FacilityTransferItem[]
+}
+
+export const getMyFacilityTransfers = async () => {
+  const { data } = await apiClient.get<{
+    total: number
+    page: number
+    page_size: number
+    plans: FacilityTransferPlan[]
+  }>('/redistribution/plans', { params: { page: 1, page_size: 50 } })
+  return data.plans
+}

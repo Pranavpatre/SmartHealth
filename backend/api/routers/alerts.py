@@ -7,7 +7,8 @@ GET    /alerts                      — paginated, filterable alert list
 GET    /alerts/{alert_id}           — single alert detail
 PATCH  /alerts/{alert_id}/acknowledge — acknowledge an open alert
 
-Access control: all endpoints require DISTRICT_OFFICER or above.
+Access control: list/get require PHC_ADMIN or above (PHC_ADMIN is force-scoped
+to their own facility); acknowledge requires DISTRICT_OFFICER or above.
 
 Schema notes (from 001_core.sql / ORM models):
   Alert.severity  → alert_severity ENUM: INFO | WARNING | CRITICAL
@@ -38,8 +39,10 @@ log = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/alerts")
 
-# ── Role guard reused across all endpoints ────────────────────────────────────
+# ── Role guards ────────────────────────────────────────────────────────────────
 _district_plus = require_role("DISTRICT_OFFICER", "STATE_ADMIN", "SUPERADMIN")
+# Read endpoints also allow PHC_ADMIN, scoped to their own facility below.
+_phc_plus = require_role("PHC_ADMIN", "DISTRICT_OFFICER", "STATE_ADMIN", "SUPERADMIN")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -162,12 +165,14 @@ async def list_alerts(
         None, description="Filter by severity: INFO | WARNING | CRITICAL"
     ),
     db: AsyncSession = Depends(get_db),
-    current_user: Any = Depends(_district_plus),
+    current_user: Any = Depends(_phc_plus),
 ) -> AlertListResponse:
     """
     Return a paginated, filtered list of alerts sorted by created_at DESC.
 
-    Requires DISTRICT_OFFICER, STATE_ADMIN, or SUPERADMIN.
+    Requires PHC_ADMIN or above. PHC_ADMIN is force-scoped to their own
+    facility (the facility_id query param is ignored for them, rather than
+    letting them pass an arbitrary facility_id).
     """
     logger = log.bind(user_id=str(current_user.id), endpoint="list_alerts")
 
@@ -193,7 +198,16 @@ async def list_alerts(
             )
         base_stmt = base_stmt.where(Alert.status == alert_status.upper())
 
-    if facility_id is not None:
+    # PHC_ADMIN is always force-scoped to their own facility, regardless of
+    # whatever facility_id was requested — they may not browse other facilities.
+    if current_user.role == "PHC_ADMIN":
+        if not current_user.facility_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User has no associated facility",
+            )
+        base_stmt = base_stmt.where(Alert.facility_id == current_user.facility_id)
+    elif facility_id is not None:
         base_stmt = base_stmt.where(Alert.facility_id == facility_id)
 
     if severity is not None:
@@ -205,8 +219,12 @@ async def list_alerts(
             )
         base_stmt = base_stmt.where(Alert.severity == severity.upper())
 
-    # ── Scope to current user's district (non-SUPERADMIN) ─────────────────
-    if current_user.role not in ("STATE_ADMIN", "SUPERADMIN") and current_user.district_id is not None:
+    # ── Scope to current user's district (non-SUPERADMIN, non-PHC_ADMIN — the
+    # latter is already scoped to a single facility above) ─────────────────
+    if (
+        current_user.role not in ("STATE_ADMIN", "SUPERADMIN", "PHC_ADMIN")
+        and current_user.district_id is not None
+    ):
         base_stmt = base_stmt.where(Facility.district_id == current_user.district_id)
 
     # ── Count total matching rows ─────────────────────────────────────────
@@ -245,15 +263,22 @@ async def list_alerts(
 async def get_alert(
     alert_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: Any = Depends(_district_plus),
+    current_user: Any = Depends(_phc_plus),
 ) -> AlertResponse:
     """
     Return full detail for a single alert.
 
-    Raises 404 if the alert does not exist.
-    Requires DISTRICT_OFFICER, STATE_ADMIN, or SUPERADMIN.
+    Raises 404 if the alert does not exist, or (for PHC_ADMIN) if it belongs
+    to a different facility — treated as not-found rather than 403 so the
+    response doesn't confirm another facility's alert exists.
+    Requires PHC_ADMIN or above.
     """
     alert, facility_name, medicine_name = await _fetch_alert_or_404(alert_id, db)
+    if current_user.role == "PHC_ADMIN" and alert.facility_id != current_user.facility_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Alert {alert_id} not found.",
+        )
     log.info("alert_fetched", alert_id=str(alert_id), user_id=str(current_user.id))
     return _build_alert_response(alert, facility_name, medicine_name)
 

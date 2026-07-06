@@ -57,6 +57,16 @@ SELECT f.id, f.district_id, 'FIELD_WORKER',
        'mr'
 FROM facilities f;
 
+-- Demo PHC/CHC admin users (facility in-charge) — one for a PHC, one for the
+-- CHC, so both facility_type branches of the role are exercised in the demo.
+INSERT INTO users (facility_id, district_id, role, name, phone, language_pref) VALUES
+((SELECT id FROM facilities WHERE code='MH-PUNE-PHC-01'),
+ (SELECT district_id FROM facilities WHERE code='MH-PUNE-PHC-01'),
+ 'PHC_ADMIN', 'Admin - Shirur PHC', '+919876500011', 'mr'),
+((SELECT id FROM facilities WHERE code='MH-PUNE-CHC-01'),
+ (SELECT district_id FROM facilities WHERE code='MH-PUNE-CHC-01'),
+ 'PHC_ADMIN', 'Admin - Junnar CHC', '+919876500012', 'mr');
+
 -- Stock batches: realistic inventory with some facilities deliberately low (for demo)
 -- PHC-08 (Haveli) has high insulin surplus — used as donor in demo
 -- PHC-01 (Shirur) has critically low insulin — triggers demo alert

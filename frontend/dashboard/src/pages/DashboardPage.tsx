@@ -6,6 +6,7 @@ import NationalBeds from '../components/NationalBeds'
 import NearestFacilities from '../components/NearestFacilities'
 import AlertCard from '../components/AlertCard'
 import DataBadge from '../components/DataBadge'
+import InfoNote from '../components/InfoNote'
 import { useAlertWebSocket } from '../hooks/useWebSocket'
 import { useTranslation } from 'react-i18next'
 import { formatNumber } from '../lib/format'
@@ -57,11 +58,13 @@ export default function DashboardPage() {
   const activeCount = alertsData?.total ?? 0        // total open, not just this page
   const criticalCount = criticalData?.total ?? 0
   const facilityCount = stats?.total ?? facilities.length
-  const avgScore = stats?.avg_score != null
-    ? Math.round(stats.avg_score)
-    : facilities.length
-      ? Math.round(facilities.reduce((s, f) => s + f.health_score, 0) / facilities.length)
-      : 0
+  // "Facilities at Risk" (Yellow + Red) replaces the old single average-score
+  // tile — an aggregate mean was hard to act on, whereas a count of facilities
+  // actually needing attention maps directly to something a district officer
+  // can go do something about.
+  const atRiskCount = stats
+    ? stats.yellow + stats.red
+    : facilities.filter((f) => f.health_score < 70).length
 
   const scoreColor = (score: number) =>
     score >= 70 ? 'text-green-700' : score >= 45 ? 'text-yellow-700' : 'text-red-700'
@@ -69,40 +72,50 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* KPI strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          {
-            label: t('kpi.active_alerts'),
-            value: activeCount,
-            color: activeCount > 0 ? 'text-red-700' : 'text-green-700',
-          },
-          {
-            label: t('kpi.critical'),
-            value: criticalCount,
-            color: criticalCount > 0 ? 'text-red-700' : 'text-gray-700',
-          },
-          {
-            label: t('kpi.avg_score'),
-            value: `${formatNumber(avgScore)}/100`,
-            color: scoreColor(avgScore),
-          },
-          {
-            label: t('kpi.facilities'),
-            value: formatNumber(facilityCount),
-            color: 'text-teal-700',
-          },
-        ].map((kpi) => (
-          <div key={kpi.label} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{kpi.label}</p>
-            <p className={`text-2xl font-bold mt-1 ${kpi.color}`}>{kpi.value}</p>
-          </div>
-        ))}
+      <div data-tour="kpi">
+        <h2 className="font-semibold text-gray-800">{t('dashboard.kpi_title')}</h2>
+        <InfoNote>{t('dashboard.info_kpi')}</InfoNote>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            {
+              label: t('kpi.active_alerts'),
+              desc: t('kpi.active_alerts_desc'),
+              value: activeCount,
+              color: activeCount > 0 ? 'text-red-700' : 'text-green-700',
+            },
+            {
+              label: t('kpi.critical'),
+              desc: t('kpi.critical_desc'),
+              value: criticalCount,
+              color: criticalCount > 0 ? 'text-red-700' : 'text-gray-700',
+            },
+            {
+              label: t('kpi.at_risk'),
+              desc: t('kpi.at_risk_desc'),
+              value: formatNumber(atRiskCount),
+              color: atRiskCount > 0 ? 'text-yellow-700' : 'text-green-700',
+            },
+            {
+              label: t('kpi.facilities'),
+              desc: t('kpi.facilities_desc'),
+              value: formatNumber(facilityCount),
+              color: 'text-teal-700',
+            },
+          ].map((kpi) => (
+            <div key={kpi.label} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{kpi.label}</p>
+              <p className={`text-2xl font-bold mt-1 ${kpi.color}`}>{kpi.value}</p>
+              <p className="text-xs text-gray-400 mt-1">{kpi.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Map + Alert feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <h2 className="font-semibold text-gray-800 mb-3">{t('dashboard.district_map')}</h2>
+        <div data-tour="map" className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <h2 className="font-semibold text-gray-800 mb-1">{t('dashboard.district_map')}</h2>
+          <InfoNote>{t('dashboard.info_map')}</InfoNote>
           {facilitiesLoading ? (
             <div className="h-96 flex items-center justify-center text-gray-400">{t('dashboard.loading_map')}</div>
           ) : (
@@ -121,8 +134,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 overflow-y-auto max-h-[520px]">
-          <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+        <div data-tour="alerts" className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 overflow-y-auto max-h-[520px]">
+          <h2 className="font-semibold text-gray-800 mb-1 flex items-center gap-2">
             {t('dashboard.alert_feed')}
             {alerts.length > 0 && (
               <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full">
@@ -131,6 +144,7 @@ export default function DashboardPage() {
             )}
             <DataBadge variant="simulated" />
           </h2>
+          <InfoNote>{t('dashboard.info_alerts')}</InfoNote>
           {alertsLoading && <p className="text-gray-400 text-sm">{t('dashboard.loading_alerts')}</p>}
           {!alertsLoading && alerts.length === 0 && (
             <p className="text-green-700 text-sm font-medium">{t('dashboard.no_alerts')}</p>
@@ -148,8 +162,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Bottom-5 facilities */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <h2 className="font-semibold text-gray-800 mb-3">{t('dashboard.bottom_facilities')}</h2>
+      <div data-tour="at-risk" className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <h2 className="font-semibold text-gray-800 mb-1">{t('dashboard.bottom_facilities')}</h2>
+        <InfoNote>{t('dashboard.info_at_risk')}</InfoNote>
         {atRiskLoading ? (
           <p className="text-gray-400 text-sm">{t('common.loading')}</p>
         ) : (
@@ -203,10 +218,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Find nearest PHCs/CHCs (Google Maps / GPS) */}
-      <NearestFacilities />
+      <div data-tour="nearest">
+        <NearestFacilities />
+      </div>
 
       {/* National / State-UT bed infrastructure (real data.gov.in) */}
-      <NationalBeds />
+      <div data-tour="beds">
+        <NationalBeds />
+      </div>
     </div>
   )
 }

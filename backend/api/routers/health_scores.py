@@ -3,7 +3,8 @@ Health Scores router — Facility health score dashboard.
 
 Endpoints:
   GET /health-scores                       latest score per facility for a district
-  GET /health-scores/{facility_id}/history  30-day time-series (TimescaleDB time_bucket)
+  GET /health-scores/mine                  latest score for the current user's own facility (PHC_ADMIN)
+  GET /health-scores/{facility_id}/history 30-day time-series (TimescaleDB time_bucket)
 """
 
 from __future__ import annotations
@@ -23,6 +24,9 @@ from db import get_db
 from models.user import User
 
 router = APIRouter(prefix="/health-scores", tags=["health-scores"])
+
+# Read endpoints that also allow PHC_ADMIN, scoped to their own facility.
+_phc_plus = require_role("PHC_ADMIN", "DISTRICT_OFFICER", "STATE_ADMIN", "SUPERADMIN")
 
 
 # ---------------------------------------------------------------------------
@@ -172,10 +176,70 @@ async def list_health_scores(
     return scores
 
 
+@router.get("/mine", response_model=Optional[FacilityScoreResponse])
+async def get_my_facility_score(
+    current_user: User = Depends(_phc_plus),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return the latest health score for the current user's own facility.
+
+    For PHC_ADMIN, whose account has a facility_id but typically no
+    district_id — unlike list_health_scores above, this doesn't require a
+    district at all. Returns null if no score has been recorded yet.
+    """
+    if not current_user.facility_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User has no associated facility",
+        )
+
+    sql = sqla_text(
+        """
+        SELECT DISTINCT ON (fhs.facility_id)
+            fhs.facility_id,
+            f.name                  AS facility_name,
+            f.district_id,
+            fhs.overall_score,
+            fhs.medicine_score,
+            fhs.doctor_score,
+            fhs.bed_score,
+            fhs.wait_time_score,
+            fhs.diagnostics_score,
+            fhs.status,
+            fhs.time                AS recorded_at
+        FROM facility_health_scores fhs
+        JOIN facilities f ON f.id = fhs.facility_id
+        WHERE fhs.facility_id = :facility_id
+        ORDER BY fhs.facility_id, fhs.time DESC
+        """
+    )
+    result = await db.execute(sql, {"facility_id": str(current_user.facility_id)})
+    row = result.mappings().first()
+    if row is None:
+        return None
+
+    overall = float(row["overall_score"]) if row["overall_score"] is not None else None
+    return FacilityScoreResponse(
+        facility_id=row["facility_id"],
+        facility_name=row["facility_name"],
+        district_id=row["district_id"],
+        overall_score=overall,
+        medicine_score=float(row["medicine_score"]) if row["medicine_score"] is not None else None,
+        doctor_score=float(row["doctor_score"]) if row["doctor_score"] is not None else None,
+        bed_score=float(row["bed_score"]) if row["bed_score"] is not None else None,
+        wait_time_score=float(row["wait_time_score"]) if row["wait_time_score"] is not None else None,
+        diagnostics_score=float(row["diagnostics_score"]) if row["diagnostics_score"] is not None else None,
+        traffic_light=_traffic_light(overall),
+        status=row["status"],
+        recorded_at=row["recorded_at"],
+    )
+
+
 @router.get("/{facility_id}/history", response_model=list[ScoreHistoryPoint])
 async def get_score_history(
     facility_id: uuid.UUID,
-    current_user: User = Depends(require_role("DISTRICT_OFFICER")),
+    current_user: User = Depends(_phc_plus),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -183,10 +247,19 @@ async def get_score_history(
     Uses TimescaleDB time_bucket to aggregate to one row per day.
     Results sorted by date ASC.
     """
-    # Verify facility belongs to user's district (unless STATE_ADMIN+)
     from auth.rbac import ROLE_HIERARCHY
 
-    if ROLE_HIERARCHY.get(current_user.role, 0) < ROLE_HIERARCHY["STATE_ADMIN"]:
+    # PHC_ADMIN may only ever request their own facility — checked directly
+    # against facility_id rather than district_id, since a PHC_ADMIN account
+    # typically has facility_id set but no district_id.
+    if current_user.role == "PHC_ADMIN":
+        if current_user.facility_id != facility_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="PHC_ADMIN may only view their own facility's history",
+            )
+    # Verify facility belongs to user's district (unless STATE_ADMIN+)
+    elif ROLE_HIERARCHY.get(current_user.role, 0) < ROLE_HIERARCHY["STATE_ADMIN"]:
         fac_check = sqla_text(
             "SELECT district_id FROM facilities WHERE id = :fid"
         )

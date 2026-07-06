@@ -33,13 +33,14 @@ export default function NationalBeds() {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-      <div className="flex items-baseline justify-between mb-3">
+      <div className="flex items-baseline justify-between">
         <h2 className="font-semibold text-gray-800 flex items-center gap-2">{t('beds.title')} <DataBadge variant="real" /></h2>
         <span className="text-xs text-gray-400">
           {t('beds.source')}
           {summary?.as_on_date ? ` · ${t('beds.as_on', { date: summary.as_on_date })}` : ''}
         </span>
       </div>
+      <p className="text-xs text-gray-400 mb-3">{t('beds.desc')}</p>
 
       {/* National summary tiles */}
       {tiles.length > 0 && (

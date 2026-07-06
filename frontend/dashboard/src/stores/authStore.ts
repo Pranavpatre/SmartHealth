@@ -7,7 +7,23 @@ interface AuthState {
   userId: string | null
   role: string | null
   name: string | null
-  setAuth: (auth: { token: string; refreshToken: string; userId: string; role: string; name: string }) => void
+  facilityId: string | null
+  facilityName: string | null
+  // Shown once after login for DISTRICT_OFFICER+ (the dashboard nav tour
+  // doesn't apply to PHC_ADMIN's single-facility view); re-openable anytime
+  // via startNavTour.
+  showNavTour: boolean
+  setAuth: (auth: {
+    token: string
+    refreshToken: string
+    userId: string
+    role: string
+    name: string
+    facilityId?: string | null
+    facilityName?: string | null
+  }) => void
+  dismissNavTour: () => void
+  startNavTour: () => void
   logout: () => void
 }
 
@@ -19,8 +35,29 @@ export const useAuthStore = create<AuthState>()(
       userId: null,
       role: null,
       name: null,
-      setAuth: (auth) => set(auth),
-      logout: () => set({ token: null, refreshToken: null, userId: null, role: null, name: null }),
+      facilityId: null,
+      facilityName: null,
+      showNavTour: false,
+      setAuth: (auth) =>
+        set({
+          facilityId: null,
+          facilityName: null,
+          ...auth,
+          showNavTour: auth.role !== 'PHC_ADMIN',
+        }),
+      dismissNavTour: () => set({ showNavTour: false }),
+      startNavTour: () => set({ showNavTour: true }),
+      logout: () =>
+        set({
+          token: null,
+          refreshToken: null,
+          userId: null,
+          role: null,
+          name: null,
+          facilityId: null,
+          facilityName: null,
+          showNavTour: false,
+        }),
     }),
     { name: 'smarthealth-auth' },
   ),

@@ -37,6 +37,8 @@ export default function LoginPage() {
         user_id: string
         role: string
         name: string
+        facility_id: string | null
+        facility_name: string | null
       }>('/auth/otp/verify', { phone, otp })
       setAuth({
         token: data.access_token,
@@ -44,8 +46,13 @@ export default function LoginPage() {
         userId: data.user_id,
         role: data.role,
         name: data.name,
+        facilityId: data.facility_id,
+        facilityName: data.facility_name,
       })
-      navigate('/dashboard')
+      // PHC_ADMIN is scoped to a single facility — land them straight on
+      // their facility view rather than the district-wide dashboard, which
+      // their role can't actually query.
+      navigate(data.role === 'PHC_ADMIN' ? '/my-facility' : '/dashboard')
     } catch {
       setError(t('login.err_invalid'))
     } finally {
