@@ -18,7 +18,11 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-key-change-in-production"
     # Stored as a comma-separated string so pydantic-settings won't try to JSON-parse it.
     # Consumers should use the `cors_origins` property which returns List[str].
-    allowed_origins: str = "http://localhost:3000,http://localhost:3001"
+    allowed_origins: str = (
+        "http://localhost:3000,http://localhost:3001,"
+        "https://predicare-dashboard.web.app,https://predicare-dashboard.firebaseapp.com,"
+        "https://predicare-field-app.web.app,https://predicare-field-app.firebaseapp.com"
+    )
 
     # Database
     database_url: str = "postgresql+asyncpg://smarthealth:smarthealth@localhost:5432/smarthealth"
