@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import {
   searchReferrals, getReferralByCode, requestPatientOtp, verifyPatientOtp, addVisitNote,
@@ -6,15 +7,15 @@ import {
 } from '../api/referrals'
 
 // Doctor / hospital staff: pull up a referral by name-search, code, or phone+OTP.
-// English-only for now (Phase-1 MVP).
 
 type Mode = 'search' | 'code' | 'otp'
 
-function errText(e: unknown) {
-  return (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Something went wrong'
+function errText(e: unknown, fallback: string) {
+  return (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail || fallback
 }
 
 export default function RetrieveReferralPage() {
+  const { t } = useTranslation()
   const [params] = useSearchParams()
   const [mode, setMode] = useState<Mode>('search')
   const [q, setQ] = useState('')
@@ -32,12 +33,11 @@ export default function RetrieveReferralPage() {
     setError(null); setInfo(null); setLoading(true); setResults([])
     try {
       const r = await getReferralByCode(c.trim())
-      if (r.consent_required) { setInfo(r.message || 'Consent required — use phone + OTP.'); setResults([r]); setSelected(null) }
+      if (r.consent_required) { setInfo(r.message || t('referral.consent_required')); setResults([r]); setSelected(null) }
       else { setSelected(r); setResults([r]) }
-    } catch (e) { setError(errText(e)) } finally { setLoading(false) }
-  }, [])
+    } catch (e) { setError(errText(e, 'Error')) } finally { setLoading(false) }
+  }, [t])
 
-  // Auto-lookup when opened from a QR/link: /referrals?code=XXXX
   useEffect(() => {
     const c = params.get('code')
     if (c) { setMode('code'); setCode(c); lookupCode(c) }
@@ -48,22 +48,22 @@ export default function RetrieveReferralPage() {
     try {
       const res = await searchReferrals({ q: q || undefined, phone: phone || undefined })
       setResults(res.results)
-      if (!res.results.length) setInfo('No referrals found for this facility.')
-    } catch (e) { setError(errText(e)) } finally { setLoading(false) }
+      if (!res.results.length) setInfo(t('referral.none_facility'))
+    } catch (e) { setError(errText(e, 'Error')) } finally { setLoading(false) }
   }
 
   const sendOtp = async () => {
     setError(null); setLoading(true)
-    try { await requestPatientOtp(phone); setOtpSent(true); setInfo('OTP sent to the patient’s phone.') }
-    catch (e) { setError(errText(e)) } finally { setLoading(false) }
+    try { await requestPatientOtp(phone); setOtpSent(true); setInfo(t('referral.otp_sent')) }
+    catch (e) { setError(errText(e, 'Error')) } finally { setLoading(false) }
   }
   const checkOtp = async () => {
     setError(null); setInfo(null); setLoading(true)
     try {
       const res = await verifyPatientOtp(phone, otp)
       setResults(res.results); setSelected(res.results[0] || null)
-      if (!res.results.length) setInfo('No records for this patient.')
-    } catch (e) { setError(errText(e)) } finally { setLoading(false) }
+      if (!res.results.length) setInfo(t('referral.none_patient'))
+    } catch (e) { setError(errText(e, 'Error')) } finally { setLoading(false) }
   }
 
   const tabBtn = (m: Mode, txt: string) => (
@@ -76,59 +76,57 @@ export default function RetrieveReferralPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Retrieve referral</h1>
-      <p className="text-gray-500 text-sm mb-5">Search a referred patient by name, enter their referral code, or use phone + OTP.</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">{t('referral.retrieve_title')}</h1>
+      <p className="text-gray-500 text-sm mb-5">{t('referral.retrieve_subtitle')}</p>
 
-      <div className="flex gap-2 mb-4">{tabBtn('search', 'Search by name')}{tabBtn('code', 'Referral code')}{tabBtn('otp', 'Phone + OTP')}</div>
+      <div className="flex gap-2 mb-4">{tabBtn('search', t('referral.tab_search'))}{tabBtn('code', t('referral.tab_code'))}{tabBtn('otp', t('referral.tab_otp'))}</div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
         {mode === 'search' && (
           <form onSubmit={runSearch} className="flex flex-wrap gap-2 items-end">
-            <div><label className="block text-xs font-semibold text-gray-600 mb-1">Patient name</label><input className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. Ramesh" /></div>
-            <div><label className="block text-xs font-semibold text-gray-600 mb-1">or Phone</label><input className={input} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+9198…" /></div>
-            <button type="submit" className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 text-sm">Search</button>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-1">{t('referral.patient_name')}</label><input className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. Ramesh" /></div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-1">{t('referral.or_phone')}</label><input className={input} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+9198…" /></div>
+            <button type="submit" className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 text-sm">{t('referral.search')}</button>
           </form>
         )}
         {mode === 'code' && (
           <div className="flex gap-2 items-end">
-            <div><label className="block text-xs font-semibold text-gray-600 mb-1">Referral code</label><input className={`${input} font-mono uppercase tracking-widest`} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABC123" /></div>
-            <button onClick={() => lookupCode(code)} disabled={!code} className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 text-sm">Open</button>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-1">{t('referral.tab_code')}</label><input className={`${input} font-mono uppercase tracking-widest`} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABC123" /></div>
+            <button onClick={() => lookupCode(code)} disabled={!code} className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 text-sm">{t('referral.open')}</button>
           </div>
         )}
         {mode === 'otp' && (
           <div className="flex flex-wrap gap-2 items-end">
-            <div><label className="block text-xs font-semibold text-gray-600 mb-1">Patient phone</label><input className={input} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+9198…" /></div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-1">{t('referral.patient_phone')}</label><input className={input} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+9198…" /></div>
             {!otpSent ? (
-              <button onClick={sendOtp} disabled={!phone} className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 text-sm">Send OTP</button>
+              <button onClick={sendOtp} disabled={!phone} className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 text-sm">{t('referral.send_otp')}</button>
             ) : (
               <>
-                <div><label className="block text-xs font-semibold text-gray-600 mb-1">OTP</label><input className={`${input} font-mono tracking-widest w-28`} value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="000000" /></div>
-                <button onClick={checkOtp} disabled={!otp} className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 text-sm">Unlock record</button>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">{t('referral.otp')}</label><input className={`${input} font-mono tracking-widest w-28`} value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="000000" /></div>
+                <button onClick={checkOtp} disabled={!otp} className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 text-sm">{t('referral.unlock')}</button>
               </>
             )}
-            <span className="text-xs text-gray-400 self-center">Patient's OTP = their consent to share.</span>
+            <span className="text-xs text-gray-400 self-center">{t('referral.otp_consent_note')}</span>
           </div>
         )}
       </div>
 
-      {loading && <p className="text-gray-400 text-sm">Loading…</p>}
+      {loading && <p className="text-gray-400 text-sm">{t('referral.loading')}</p>}
       {error && <div className="bg-red-50 text-red-700 text-sm rounded-lg px-4 py-2.5 mb-3">{error}</div>}
       {info && <div className="bg-amber-50 text-amber-700 text-sm rounded-lg px-4 py-2.5 mb-3">{info}</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* results list */}
         {results.length > 1 && (
           <div className="lg:col-span-2 space-y-2">
             {results.map((r) => (
               <button key={r.id} onClick={() => !r.consent_required && setSelected(r)}
                 className={`w-full text-left bg-white border rounded-lg p-3 ${selected?.id === r.id ? 'border-teal-500 ring-2 ring-teal-200' : 'border-gray-200 hover:border-gray-300'}`}>
                 <div className="font-semibold text-gray-900">{r.patient.name}</div>
-                <div className="text-xs text-gray-500">{r.from_facility} → {r.to_facility || 'any DH'} · {r.status}</div>
+                <div className="text-xs text-gray-500">{r.from_facility} → {r.to_facility || t('referral.any_dh')} · {r.status}</div>
               </button>
             ))}
           </div>
         )}
-        {/* detail */}
         <div className={results.length > 1 ? 'lg:col-span-3' : 'lg:col-span-5'}>
           {selected ? <ReferralDetail referral={selected} onNoteAdded={() => lookupCode(selected.code)} /> : null}
         </div>
@@ -138,6 +136,7 @@ export default function RetrieveReferralPage() {
 }
 
 function ReferralDetail({ referral, onNoteAdded }: { referral: Referral; onNoteAdded: () => void }) {
+  const { t } = useTranslation()
   const [dx, setDx] = useState('')
   const [action, setAction] = useState('')
   const [follow, setFollow] = useState('')
@@ -163,12 +162,12 @@ function ReferralDetail({ referral, onNoteAdded }: { referral: Referral; onNoteA
         </div>
         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700">{referral.status}</span>
       </div>
-      <div className="mt-3 text-sm text-gray-600">{referral.from_facility} → {referral.to_facility || 'any district hospital'} · code <span className="font-mono">{referral.code}</span></div>
-      {referral.reason && <div className="mt-3"><div className="text-xs font-semibold text-gray-500">Reason</div><div className="text-sm text-gray-800">{referral.reason}</div></div>}
+      <div className="mt-3 text-sm text-gray-600">{referral.from_facility} → {referral.to_facility || t('referral.any_dh')} · <span className="font-mono">{referral.code}</span></div>
+      {referral.reason && <div className="mt-3"><div className="text-xs font-semibold text-gray-500">{t('referral.reason_h')}</div><div className="text-sm text-gray-800">{referral.reason}</div></div>}
 
       {Object.keys(cs).length > 0 && (
         <div className="mt-3">
-          <div className="text-xs font-semibold text-gray-500 mb-1">Clinical summary (from PHC)</div>
+          <div className="text-xs font-semibold text-gray-500 mb-1">{t('referral.clinical_summary')}</div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(cs).map(([k, v]) => (
               <span key={k} className="text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1"><b className="text-gray-500">{k.replace(/_/g, ' ')}:</b> {String(v)}</span>
@@ -179,7 +178,7 @@ function ReferralDetail({ referral, onNoteAdded }: { referral: Referral; onNoteA
 
       {referral.visit_notes && referral.visit_notes.length > 0 && (
         <div className="mt-4">
-          <div className="text-xs font-semibold text-gray-500 mb-1">History / visit notes</div>
+          <div className="text-xs font-semibold text-gray-500 mb-1">{t('referral.history')}</div>
           <div className="space-y-2">
             {referral.visit_notes.map((n) => (
               <div key={n.id} className="text-sm bg-gray-50 border border-gray-100 rounded-lg p-2.5">
@@ -192,14 +191,14 @@ function ReferralDetail({ referral, onNoteAdded }: { referral: Referral; onNoteA
       )}
 
       <div className="mt-5 border-t border-gray-100 pt-4">
-        <div className="text-xs font-semibold text-gray-500 mb-2">Add visit outcome</div>
+        <div className="text-xs font-semibold text-gray-500 mb-2">{t('referral.add_outcome')}</div>
         <div className="grid grid-cols-3 gap-2">
-          <input className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Diagnosis" value={dx} onChange={(e) => setDx(e.target.value)} />
-          <input className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Action taken" value={action} onChange={(e) => setAction(e.target.value)} />
-          <input className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Follow-up" value={follow} onChange={(e) => setFollow(e.target.value)} />
+          <input className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder={t('referral.diagnosis')} value={dx} onChange={(e) => setDx(e.target.value)} />
+          <input className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder={t('referral.action_taken')} value={action} onChange={(e) => setAction(e.target.value)} />
+          <input className="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder={t('referral.follow_up')} value={follow} onChange={(e) => setFollow(e.target.value)} />
         </div>
         <button onClick={save} disabled={saving || (!dx && !action && !follow)} className="mt-3 bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 text-sm">
-          {saving ? 'Saving…' : 'Save outcome'}
+          {saving ? t('referral.saving') : t('referral.save_outcome')}
         </button>
       </div>
     </div>

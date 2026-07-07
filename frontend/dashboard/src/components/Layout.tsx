@@ -45,8 +45,8 @@ export default function Layout() {
               <NavLink to="/redistribution" className={navClass}>{t('nav.redistribution')}</NavLink>
             </>
           )}
-          {canRefer && <NavLink to="/refer" className={navClass}>Refer Patient</NavLink>}
-          {canRetrieve && <NavLink to="/referrals" className={navClass}>Referrals</NavLink>}
+          {canRefer && <NavLink to="/refer" className={navClass}>{t('nav.refer')}</NavLink>}
+          {canRetrieve && <NavLink to="/referrals" className={navClass}>{t('nav.referrals')}</NavLink>}
           <NavLink to="/assistant" className={navClass}>{t('nav.assistant')}</NavLink>
           <NavLink to="/diagnostics" className={navClass}>Diagnostics</NavLink>
         </div>
