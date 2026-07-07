@@ -25,6 +25,9 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     phone: Mapped[str] = mapped_column(String(15), nullable=False, unique=True)
     language_pref: Mapped[str] = mapped_column(String(10), nullable=False, default="hi")
+    # ABDM Healthcare Professionals Registry (HPR) id — verifies this user is a
+    # registered doctor/nurse. Populated later via ABDM (Phase 3).
+    hpr_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

@@ -160,19 +160,38 @@ All screens localized across the existing 10 languages.
 - **When ready later:** provision a WhatsApp Business number, permanent access token, `phone_number_id`, and a **Meta-approved template**; set `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` on Cloud Run (currently unset). Send then flips on automatically — no code change.
 - SMS can be added as a secondary channel later (same OTP/delivery abstraction).
 
-## 11. ABDM / interoperability (the real end-state)
+## 11. ABDM integration (Phase 3) — the real end-state
 
-The "one report that floats to all hospitals" is exactly what India's **ABDM** provides — the compliant way is federated-with-consent, not one central store:
-- **ABHA ID** as the patient key (add `abha_id` now, adopt later).
-- **HIE-CM** (Health Information Exchange & Consent Manager) — records stay at each facility and are pulled on patient consent. Our OTP-consent + access-log model maps directly onto this.
-- **FHIR** as the record format for `clinical_summary` / `visit_notes`.
-- MVP builds the workflow and consent UX now; we later swap the internal store for ABDM linkage without changing the user experience.
+The "one report that floats to all hospitals" is exactly what India's **ABDM** (Ayushman Bharat Digital Mission) provides — the compliant way is federated-with-consent, not one central store. ABDM exposes three registries/components we integrate with:
+
+| Component | What it is | How PrediCare uses it | Link field |
+|---|---|---|---|
+| **ABHA** | 14-digit Ayushman Bharat Health Account — the citizen's portable health identity | Key the patient record to ABHA; via **HIE-CM** pull their past records (labs, prescriptions) from other ABDM providers on consent | `patients.abha_id` |
+| **HPR** | Healthcare Professionals Registry — verified doctors/nurses | Verify a `HOSPITAL_STAFF` user is a real registered professional at onboarding | `users.hpr_id` |
+| **HFR** | Health Facility Registry — public + private hospitals/clinics/labs | Link our 52k facilities to their official HFR ids; discover the right district hospital to refer to | `facilities.hfr_id` |
+
+**Linkage fields are already in the schema (added 2026-07-07)** — `patients.abha_id`, `users.hpr_id`, `facilities.hfr_id` (all nullable, unused until integration). No further migration needed to start.
+
+**Access model — gated, two environments:**
+- **Sandbox** (`sandbox.abdm.gov.in`): free self-registration → `client_id`/`client_secret`; test against **synthetic** data. This is where the POC/demo integration runs.
+- **Production** (real citizen records): requires the org to register as a **HIU/HIP** (Health Information User/Provider), pass **milestone-based certification**, and meet security/DPDP compliance — an organizational onboarding process, not a code change.
+
+**Planned integration surface** (new `backend/api/integrations/abdm.py` client, gated on sandbox creds):
+- **ABHA**: create / verify ABHA (OTP via Aadhaar or mobile) → store `abha_id` on the patient.
+- **HFR**: search facilities → populate `hfr_id`; use official facility identity for `to_facility`.
+- **HPR**: verify professional → populate `hpr_id` on the doctor's account.
+- **HIE-CM (records)**: raise a **consent request** → patient approves → fetch **FHIR** care-context bundles → render alongside our `visit_notes`. Our existing OTP-consent + `referral_access_log` maps directly onto ABDM's consent-artefact + audit model.
+- **FHIR**: shape `clinical_summary` / `visit_notes` as FHIR resources for exchange.
+
+**Sequencing:** the MVP already builds the workflow + consent UX; Phase 3 swaps the internal store for ABDM linkage **without changing the user experience** — the doctor still searches by name; behind the scenes the record is pulled from ABDM with consent. First step is obtaining ABDM **sandbox** credentials (org self-registration); then the `abdm.py` client + wiring can be built against synthetic data.
+
+> Security note: never call ABDM production endpoints without authorization; the sandbox uses synthetic data and is the correct surface for development/demos. Do not hardcode endpoints — follow the official ABDM sandbox API docs.
 
 ## 12. Phasing
 
-- **Phase 1 (MVP):** patient + referral model, create at PHC, WhatsApp delivery (graceful degrade), retrieval by QR/code/phone-OTP, both access models, consent + access log, DH visit-note. Synthetic/demo data.
-- **Phase 2:** ABHA field + basic FHIR shaping; SMS fallback; document attachments; patient-facing "who accessed my record".
-- **Phase 3:** ABDM HIE-CM linkage; retention/consent-expiry automation; column-level PII encryption.
+- **Phase 1 (MVP) — DONE & LIVE:** patient + referral model, create at PHC, WhatsApp delivery (graceful degrade), retrieval by name-search / code / phone-OTP (authenticated doctor), two-tier consent + access log, DH visit-note. 10-language UI. Synthetic/demo data.
+- **Phase 2:** basic FHIR shaping; SMS fallback; document attachments; patient-facing "who accessed my record". (ABDM linkage fields `abha_id`/`hfr_id`/`hpr_id` already added to the schema.)
+- **Phase 3 — ABDM integration (see §11):** obtain sandbox creds → `abdm.py` client (ABHA verify/create, HFR facility link, HPR professional verify, HIE-CM consent + FHIR record pull); then production HIU/HIP certification. Plus retention/consent-expiry automation and column-level PII encryption.
 
 ## 13. Decisions & remaining questions
 

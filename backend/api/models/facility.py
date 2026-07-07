@@ -40,6 +40,9 @@ class Facility(Base):
     district_id: Mapped[int] = mapped_column(ForeignKey("districts.id"), nullable=False)
     # e.g. MH-PUNE-PHC-021 — max 20 chars per schema
     code: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
+    # ABDM Health Facility Registry (HFR) id — links this facility to the
+    # national registry. Populated later via ABDM sandbox/production (Phase 3).
+    hfr_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     # Matches facility_type ENUM: PHC | CHC | SUB_CENTRE | DISTRICT_HOSPITAL
     facility_type: Mapped[str] = mapped_column(
