@@ -2,13 +2,14 @@ import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import {
-  searchReferrals, getReferralByCode, requestPatientOtp, verifyPatientOtp, addVisitNote,
+  getReferralByCode, requestPatientOtp, verifyPatientOtp, addVisitNote,
   type Referral,
 } from '../api/referrals'
 
-// Doctor / hospital staff: pull up a referral by name-search, code, or phone+OTP.
+// Doctor / hospital staff: pull up a referral by scanning/entering the code
+// (QR sent to the patient on WhatsApp) or by patient phone + OTP.
 
-type Mode = 'search' | 'code' | 'otp'
+type Mode = 'code' | 'otp'
 
 function errText(e: unknown, fallback: string) {
   return (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail || fallback
@@ -17,8 +18,7 @@ function errText(e: unknown, fallback: string) {
 export default function RetrieveReferralPage() {
   const { t } = useTranslation()
   const [params] = useSearchParams()
-  const [mode, setMode] = useState<Mode>('search')
-  const [q, setQ] = useState('')
+  const [mode, setMode] = useState<Mode>('code')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [otp, setOtp] = useState('')
@@ -42,15 +42,6 @@ export default function RetrieveReferralPage() {
     const c = params.get('code')
     if (c) { setMode('code'); setCode(c); lookupCode(c) }
   }, [params, lookupCode])
-
-  const runSearch = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(null); setInfo(null); setLoading(true); setSelected(null)
-    try {
-      const res = await searchReferrals({ q: q || undefined, phone: phone || undefined })
-      setResults(res.results)
-      if (!res.results.length) setInfo(t('referral.none_facility'))
-    } catch (e) { setError(errText(e, 'Error')) } finally { setLoading(false) }
-  }
 
   const sendOtp = async () => {
     setError(null); setLoading(true)
@@ -79,16 +70,9 @@ export default function RetrieveReferralPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-1">{t('referral.retrieve_title')}</h1>
       <p className="text-gray-500 text-sm mb-5">{t('referral.retrieve_subtitle')}</p>
 
-      <div className="flex gap-2 mb-4">{tabBtn('search', t('referral.tab_search'))}{tabBtn('code', t('referral.tab_code'))}{tabBtn('otp', t('referral.tab_otp'))}</div>
+      <div className="flex gap-2 mb-4">{tabBtn('code', t('referral.tab_code'))}{tabBtn('otp', t('referral.tab_otp'))}</div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-        {mode === 'search' && (
-          <form onSubmit={runSearch} className="flex flex-wrap gap-2 items-end">
-            <div><label className="block text-xs font-semibold text-gray-600 mb-1">{t('referral.patient_name')}</label><input className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. Ramesh" /></div>
-            <div><label className="block text-xs font-semibold text-gray-600 mb-1">{t('referral.or_phone')}</label><input className={input} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+9198…" /></div>
-            <button type="submit" className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 text-sm">{t('referral.search')}</button>
-          </form>
-        )}
         {mode === 'code' && (
           <div className="flex gap-2 items-end">
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">{t('referral.tab_code')}</label><input className={`${input} font-mono uppercase tracking-widest`} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABC123" /></div>
