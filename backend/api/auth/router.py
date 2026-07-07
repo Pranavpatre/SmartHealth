@@ -57,6 +57,10 @@ class TokenResponse(BaseModel):
     name: str
     facility_id: str | None = None
     facility_name: str | None = None
+    district_id: int | None = None
+    district_name: str | None = None
+    state_id: int | None = None
+    state_name: str | None = None
     language_pref: str
 
 
@@ -123,6 +127,18 @@ async def verify_otp(body: OTPVerify, db: AsyncSession = Depends(get_db)):
         fac_result = await db.execute(select(Facility.name).where(Facility.id == user.facility_id))
         facility_name = fac_result.scalar_one_or_none()
 
+    # Resolve the user's district + state so the dashboard can auto-scope its
+    # filters (e.g. a district officer lands with their state/district selected).
+    district_name = state_id = state_name = None
+    if user.district_id is not None:
+        from sqlalchemy import text as _sa_text
+        geo = (await db.execute(
+            _sa_text("SELECT d.name, s.id, s.name FROM districts d JOIN states s ON s.id = d.state_id WHERE d.id = :did"),
+            {"did": user.district_id},
+        )).first()
+        if geo:
+            district_name, state_id, state_name = geo[0], geo[1], geo[2]
+
     log.info("user_login", user_id=str(user.id), role=user.role)
     return TokenResponse(
         access_token=access,
@@ -132,6 +148,10 @@ async def verify_otp(body: OTPVerify, db: AsyncSession = Depends(get_db)):
         name=user.name,
         facility_id=str(user.facility_id) if user.facility_id else None,
         facility_name=facility_name,
+        district_id=user.district_id,
+        district_name=district_name,
+        state_id=state_id,
+        state_name=state_name,
         language_pref=user.language_pref,
     )
 

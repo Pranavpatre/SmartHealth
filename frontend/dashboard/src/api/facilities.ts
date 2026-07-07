@@ -61,7 +61,9 @@ export interface NearestFacility {
   distance_km: number
   traffic_light: 'GREEN' | 'YELLOW' | 'RED' | null
   health_score: number | null
+  district_id: number | null
   district_name: string | null
+  state_id: number | null
 }
 
 export const getNearestFacilities = async (lat: number, lng: number, limit = 10) => {

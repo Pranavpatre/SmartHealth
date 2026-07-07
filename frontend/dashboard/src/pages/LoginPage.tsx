@@ -39,6 +39,10 @@ export default function LoginPage() {
         name: string
         facility_id: string | null
         facility_name: string | null
+        district_id: number | null
+        district_name: string | null
+        state_id: number | null
+        state_name: string | null
       }>('/auth/otp/verify', { phone, otp })
       setAuth({
         token: data.access_token,
@@ -48,6 +52,10 @@ export default function LoginPage() {
         name: data.name,
         facilityId: data.facility_id,
         facilityName: data.facility_name,
+        districtId: data.district_id,
+        districtName: data.district_name,
+        stateId: data.state_id,
+        stateName: data.state_name,
       })
       // PHC_ADMIN is scoped to a single facility — land them straight on
       // their facility view rather than the district-wide dashboard, which

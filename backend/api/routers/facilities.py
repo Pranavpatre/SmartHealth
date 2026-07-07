@@ -448,7 +448,9 @@ class NearestFacility(BaseModel):
     distance_km: float
     traffic_light: str | None = None
     health_score: float | None = None
+    district_id: int | None = None
     district_name: str | None = None
+    state_id: int | None = None
 
 
 @router.get("/nearest", response_model=list[NearestFacility], summary="Nearest PHCs/CHCs to a location")
@@ -489,7 +491,8 @@ async def nearest_facilities(
                            f.location::geography,
                            ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
                        ) / 1000.0 AS distance_km,
-                       l.status, l.overall_score, d.name AS district_name
+                       l.status, l.overall_score, d.name AS district_name,
+                       d.id AS district_id, d.state_id AS state_id
                 FROM facilities f
                 JOIN districts d ON d.id = f.district_id
                 LEFT JOIN latest l ON l.facility_id = f.id
@@ -508,6 +511,8 @@ async def nearest_facilities(
             traffic_light=r.status,
             health_score=float(r.overall_score) if r.overall_score is not None else None,
             district_name=r.district_name,
+            district_id=r.district_id,
+            state_id=r.state_id,
         )
         for r in rows
     ]

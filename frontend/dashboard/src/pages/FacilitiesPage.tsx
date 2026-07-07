@@ -6,9 +6,11 @@ import {
   browseFacilities,
   getStates,
   getDistricts,
+  getNearestFacilities,
   type FacilityBrowseRow,
 } from '../api/facilities'
 import { formatNumber } from '../lib/format'
+import { useAuthStore } from '../stores/authStore'
 
 type TrafficFilter = 'ALL' | 'RED' | 'YELLOW' | 'GREEN'
 type TypeFilter = 'ALL' | 'PHC' | 'CHC'
@@ -40,17 +42,49 @@ export default function FacilitiesPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
 
-  const [stateId, setStateId] = useState<number | undefined>()
-  const [districtId, setDistrictId] = useState<number | undefined>()
+  // Auto-scope the filters to the logged-in user: a district officer lands with
+  // their state + district preselected; a state admin with their state; a
+  // national (SUPERADMIN) user with everything (no preset).
+  const { role, stateId: userStateId, districtId: userDistrictId } = useAuthStore()
+  const isNational = role === 'SUPERADMIN'
+  const [stateId, setStateId] = useState<number | undefined>(
+    isNational ? undefined : (userStateId ?? undefined),
+  )
+  const [districtId, setDistrictId] = useState<number | undefined>(
+    isNational ? undefined : (userDistrictId ?? undefined),
+  )
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
   const [trafficFilter, setTrafficFilter] = useState<TrafficFilter>('ALL')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
+  const [locating, setLocating] = useState(false)
+
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search), 400)
     return () => clearTimeout(id)
   }, [search])
+
+  // Auto-select the district for the user's current location (browser geolocation
+  // → nearest facility → its state/district).
+  const useMyLocation = () => {
+    if (!navigator.geolocation) return
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const nearest = await getNearestFacilities(pos.coords.latitude, pos.coords.longitude, 1)
+          const n = nearest[0]
+          if (n?.state_id) setStateId(n.state_id)
+          if (n?.district_id) setDistrictId(n.district_id ?? undefined)
+        } finally {
+          setLocating(false)
+        }
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: false, timeout: 8000 },
+    )
+  }
 
   const { data: states = [] } = useQuery({ queryKey: ['states'], queryFn: getStates })
   const { data: districts = [] } = useQuery({
@@ -119,6 +153,18 @@ export default function FacilitiesPage() {
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
+          </div>
+          {/* Geolocation → auto-select district */}
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={useMyLocation}
+              disabled={locating}
+              title={t('facilities.near_me')}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
+            >
+              📍 {locating ? t('referral.loading') : t('facilities.near_me')}
+            </button>
           </div>
           {/* Search */}
           <div className="flex-1 min-w-48">
