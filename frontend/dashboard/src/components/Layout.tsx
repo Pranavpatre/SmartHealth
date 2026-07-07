@@ -20,6 +20,8 @@ export default function Layout() {
   const { t, i18n } = useTranslation()
   const { name, role, logout, startNavTour } = useAuthStore()
   const isPhcAdmin = role === 'PHC_ADMIN'
+  const canRefer = ['FIELD_WORKER', 'PHC_ADMIN', 'SUPERADMIN'].includes(role || '')
+  const canRetrieve = ['HOSPITAL_STAFF', 'DISTRICT_OFFICER', 'STATE_ADMIN', 'SUPERADMIN'].includes(role || '')
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -43,6 +45,8 @@ export default function Layout() {
               <NavLink to="/redistribution" className={navClass}>{t('nav.redistribution')}</NavLink>
             </>
           )}
+          {canRefer && <NavLink to="/refer" className={navClass}>Refer Patient</NavLink>}
+          {canRetrieve && <NavLink to="/referrals" className={navClass}>Referrals</NavLink>}
           <NavLink to="/assistant" className={navClass}>{t('nav.assistant')}</NavLink>
           <NavLink to="/diagnostics" className={navClass}>Diagnostics</NavLink>
         </div>

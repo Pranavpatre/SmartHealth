@@ -8,6 +8,8 @@ import RedistributionPage from './pages/RedistributionPage'
 import AssistantPage from './pages/AssistantPage'
 import MyFacilityPage from './pages/MyFacilityPage'
 import DiagnosticsPage from './pages/DiagnosticsPage'
+import ReferPatientPage from './pages/ReferPatientPage'
+import RetrieveReferralPage from './pages/RetrieveReferralPage'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -43,6 +45,8 @@ export default function App() {
         <Route path="assistant" element={<AssistantPage />} />
         <Route path="my-facility" element={<MyFacilityPage />} />
         <Route path="diagnostics" element={<DiagnosticsPage />} />
+        <Route path="refer" element={<ReferPatientPage />} />
+        <Route path="referrals" element={<RetrieveReferralPage />} />
       </Route>
     </Routes>
   )
