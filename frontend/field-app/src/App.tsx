@@ -96,6 +96,31 @@ export default function App() {
     return () => window.removeEventListener('online', handleOnline)
   }, [])
 
+  // If the logged-in user has no assigned facility (e.g. an admin/tester), scope
+  // the data-entry screens to the GPS-nearest facility so "my location facility"
+  // still shows beds/tests/doctors instead of empty sections.
+  useEffect(() => {
+    const { token, facilityId, activeFacilityId, setActiveFacility } = useAuthStore.getState()
+    if (!token || facilityId || activeFacilityId || !navigator.geolocation) return
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const r = await fetch(
+            `${API}/api/v1/facilities/nearest?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&limit=1`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          )
+          if (r.ok) {
+            const list = await r.json()
+            if (list[0]?.id) setActiveFacility(list[0].id, list[0].name)
+          }
+        } catch { /* keep empty; nothing to scope to */ }
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
+    )
+  }, [])
+
   return (
     <>
       <OfflineBanner />

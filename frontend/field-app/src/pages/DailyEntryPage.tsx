@@ -20,7 +20,9 @@ function generateClientId() {
 // matrix, test availability, medicine stock) live in the Stock tab.
 export default function DailyEntryPage() {
   const { t } = useTranslation()
-  const { facilityId, userId, languagePref } = useAuthStore()
+  const { userId, languagePref } = useAuthStore()
+  // Prefer the user's assigned facility; fall back to the GPS-resolved one.
+  const facilityId = useAuthStore((s) => s.facilityId ?? s.activeFacilityId)
   const today = format(new Date(), 'yyyy-MM-dd')
 
   // Rapid footfall tally (general / maternal / emergency)

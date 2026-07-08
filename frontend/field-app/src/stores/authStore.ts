@@ -7,6 +7,10 @@ interface AuthState {
   userId: string | null
   name: string | null
   facilityName: string | null
+  // Facility resolved from GPS when the logged-in user has no assigned facility
+  // (e.g. an admin/tester). Data-entry screens fall back to this.
+  activeFacilityId: string | null
+  activeFacilityName: string | null
   languagePref: string
   // Set true by setAuth on every successful login; the app shows the
   // "how to use" popup once and clears it via dismissLoginHelp.
@@ -20,6 +24,7 @@ interface AuthState {
     languagePref?: string
   }) => void
   dismissLoginHelp: () => void
+  setActiveFacility: (id: string, name?: string) => void
   logout: () => void
 }
 
@@ -31,10 +36,13 @@ export const useAuthStore = create<AuthState>()(
       userId: null,
       name: null,
       facilityName: null,
+      activeFacilityId: null,
+      activeFacilityName: null,
       languagePref: 'hi',
       justLoggedIn: false,
       setAuth: (a) => set({ languagePref: 'hi', ...a, justLoggedIn: true }),
       dismissLoginHelp: () => set({ justLoggedIn: false }),
+      setActiveFacility: (id, name) => set({ activeFacilityId: id, activeFacilityName: name ?? null }),
       logout: () =>
         set({
           token: null,
@@ -42,6 +50,8 @@ export const useAuthStore = create<AuthState>()(
           userId: null,
           name: null,
           facilityName: null,
+          activeFacilityId: null,
+          activeFacilityName: null,
           languagePref: 'hi',
           justLoggedIn: false,
         }),

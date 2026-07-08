@@ -16,7 +16,8 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function DoctorAttendance() {
   const { t } = useTranslation()
-  const { facilityId, token } = useAuthStore()
+  const token = useAuthStore((s) => s.token)
+  const facilityId = useAuthStore((s) => s.facilityId ?? s.activeFacilityId)
   const hdr = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 
   const [doctors, setDoctors] = useState<Doctor[]>([])

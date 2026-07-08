@@ -19,7 +19,8 @@ interface MedicineRow extends CachedMedicine {
 
 export default function StockEntryPage() {
   const { t } = useTranslation()
-  const { facilityId, languagePref } = useAuthStore()
+  const languagePref = useAuthStore((s) => s.languagePref)
+  const facilityId = useAuthStore((s) => s.facilityId ?? s.activeFacilityId)
   const [medicines, setMedicines] = useState<MedicineRow[]>([])
   const [loading, setLoading] = useState(true)
   const [pendingCount, setPendingCount] = useState(0)

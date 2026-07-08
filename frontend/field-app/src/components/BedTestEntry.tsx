@@ -14,7 +14,8 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function BedTestEntry({ section }: { section: 'beds' | 'tests' }) {
   const { t } = useTranslation()
-  const { facilityId, token } = useAuthStore()
+  const token = useAuthStore((s) => s.token)
+  const facilityId = useAuthStore((s) => s.facilityId ?? s.activeFacilityId)
   const authHdr = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 
   const [beds, setBeds] = useState<{ bed_type: string; total_beds: number; occupied_beds: number; occupied_until: string | null }[]>([])
