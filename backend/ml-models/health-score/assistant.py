@@ -62,6 +62,12 @@ class DistrictContext:
     facilities_by_critical_alerts: list[dict] = field(default_factory=list)
     # [{facility, medicine, stock, reorder}] — live stock below reorder level
     medicine_shortages: list[dict] = field(default_factory=list)
+    # [{facility, doctors, needed}] — understaffed facilities
+    doctor_gaps: list[dict] = field(default_factory=list)
+    # [{facility, test}] — unavailable diagnostic tests
+    test_gaps: list[dict] = field(default_factory=list)
+    # [{facility, occupied, capacity}] — facilities near bed capacity
+    bed_pressure: list[dict] = field(default_factory=list)
 
 
 class HealthAssistant:
@@ -257,6 +263,31 @@ class HealthAssistant:
                 )
         else:
             lines.append("MEDICINE SHORTAGES (stock below reorder): None")
+
+        # Doctors — understaffed facilities
+        if context.doctor_gaps:
+            lines.append("")
+            lines.append("UNDERSTAFFED FACILITIES (doctors on roster vs needed):")
+            for d in context.doctor_gaps:
+                lines.append(f"  - {d.get('facility')}: {d.get('doctors', 0)} doctors (needs ~{d.get('needed', 0)})")
+        else:
+            lines.append("UNDERSTAFFED FACILITIES (doctors): None")
+
+        # Tests — unavailable diagnostics
+        if context.test_gaps:
+            lines.append("UNAVAILABLE TESTS:")
+            for tg in context.test_gaps:
+                lines.append(f"  - {tg.get('facility')}: {tg.get('test')} unavailable")
+        else:
+            lines.append("UNAVAILABLE TESTS: None reported")
+
+        # Beds — facilities near capacity
+        if context.bed_pressure:
+            lines.append("FACILITIES NEAR BED CAPACITY (>=80% occupied):")
+            for b in context.bed_pressure:
+                lines.append(f"  - {b.get('facility')}: {b.get('occupied', 0)}/{b.get('capacity', 0)} beds occupied")
+        else:
+            lines.append("FACILITIES NEAR BED CAPACITY: None")
 
         # Top risks
         if context.top_risks:

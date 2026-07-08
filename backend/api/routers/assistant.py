@@ -419,6 +419,57 @@ async def query_assistant(
     ]
 
     # ------------------------------------------------------------------
+    # 10-12. Doctors, tests, beds (district scope only — national skips).
+    # ------------------------------------------------------------------
+    doctor_gaps: list[dict] = []
+    test_gaps: list[dict] = []
+    bed_pressure: list[dict] = []
+    if not is_national:
+        # Understaffed facilities: roster < ~OPD/50 doctors needed.
+        doc_rows = (await db.execute(sqla_text(
+            f"""
+            WITH dc AS (SELECT facility_id, count(*) n FROM doctors GROUP BY facility_id)
+            SELECT f.name AS facility, COALESCE(dc.n,0) AS doctors,
+                   COALESCE(snap.opd_count,0) AS opd
+            FROM facilities f
+            LEFT JOIN dc ON dc.facility_id = f.id
+            LEFT JOIN mv_facility_latest_snapshot snap ON snap.facility_id = f.id
+            WHERE 1=1 {_dcond}
+              AND COALESCE(dc.n,0) < GREATEST(1, ceil(COALESCE(snap.opd_count,0)/50.0))
+            ORDER BY (GREATEST(1, ceil(COALESCE(snap.opd_count,0)/50.0)) - COALESCE(dc.n,0)) DESC
+            LIMIT 15
+            """), params)).mappings().all()
+        doctor_gaps = [{"facility": r["facility"], "doctors": int(r["doctors"]),
+                        "needed": max(1, -(-int(r["opd"]) // 50))} for r in doc_rows]
+
+        # Unavailable diagnostic tests.
+        test_rows = (await db.execute(sqla_text(
+            f"""
+            SELECT f.name AS facility, dt.name AS test
+            FROM test_availability ta
+            JOIN facilities f ON f.id = ta.facility_id
+            JOIN diagnostic_tests dt ON dt.id = ta.test_id
+            WHERE ta.available = FALSE {_dcond}
+            ORDER BY f.name LIMIT 20
+            """), params)).mappings().all()
+        test_gaps = [{"facility": r["facility"], "test": r["test"]} for r in test_rows]
+
+        # Facilities running near bed capacity (>= 80% occupied).
+        bed_rows = (await db.execute(sqla_text(
+            f"""
+            SELECT f.name AS facility, SUM(fb.occupied_beds) AS occ, SUM(fb.total_beds) AS cap
+            FROM facility_beds fb JOIN facilities f ON f.id = fb.facility_id
+            WHERE 1=1 {_dcond}
+            GROUP BY f.name
+            HAVING SUM(fb.total_beds) > 0
+               AND SUM(fb.occupied_beds)::float / SUM(fb.total_beds) >= 0.8
+            ORDER BY SUM(fb.occupied_beds)::float / NULLIF(SUM(fb.total_beds),0) DESC
+            LIMIT 15
+            """), params)).mappings().all()
+        bed_pressure = [{"facility": r["facility"], "occupied": int(r["occ"]),
+                         "capacity": int(r["cap"])} for r in bed_rows]
+
+    # ------------------------------------------------------------------
     # Assemble context and call the assistant
     # ------------------------------------------------------------------
     # Lazy-import the ML assistant module so a missing ml-models dir or the
@@ -445,6 +496,9 @@ async def query_assistant(
         top_risks=top_risks,
         facilities_by_critical_alerts=facilities_by_critical_alerts,
         medicine_shortages=medicine_shortages,
+        doctor_gaps=doctor_gaps,
+        test_gaps=test_gaps,
+        bed_pressure=bed_pressure,
     )
 
     from config import get_settings
