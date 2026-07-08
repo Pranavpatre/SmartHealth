@@ -10,5 +10,8 @@ def test_hierarchy_order():
 
 
 def test_all_roles_present():
-    expected = {"FIELD_WORKER", "PHC_ADMIN", "DISTRICT_OFFICER", "STATE_ADMIN", "SUPERADMIN"}
+    expected = {
+        "FIELD_WORKER", "PHC_ADMIN", "HOSPITAL_STAFF",
+        "DISTRICT_OFFICER", "STATE_ADMIN", "SUPERADMIN",
+    }
     assert expected == set(ROLE_HIERARCHY.keys())
