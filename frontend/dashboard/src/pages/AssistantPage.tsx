@@ -238,7 +238,7 @@ export default function AssistantPage() {
             </div>
             <div className="bg-gray-100 rounded-2xl rounded-tl-sm">
               <LoadingDots />
-              <p className="px-4 pb-2 -mt-1 text-xs text-gray-400">{t('assistant.thinking_hint', 'Analyzing live district data… this can take up to ~30s.')}</p>
+              <p className="px-4 pb-2 -mt-1 text-xs text-gray-400">{t('assistant.thinking_hint', 'Analyzing live district data…')}</p>
             </div>
           </div>
         )}

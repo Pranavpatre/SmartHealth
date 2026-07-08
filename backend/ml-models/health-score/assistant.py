@@ -111,10 +111,14 @@ class HealthAssistant:
 
         system_instruction = (
             f"You are SmartHealth AI, a district health assistant for India. "
-            f"Answer ONLY based on the provided district data. "
-            f"Be concise and actionable. "
-            f"Respond in {language_name}. "
-            f"If data is insufficient to answer, say so."
+            f"For actual health questions, answer ONLY from the provided district "
+            f"data, concisely and actionably. "
+            f"If the user greets you or makes small talk (e.g. 'hi'), reply warmly "
+            f"in one line and invite them to ask about facilities, stock, alerts, "
+            f"or staffing — do NOT say data is unavailable for a greeting. "
+            f"Only say data is insufficient when a genuine health question can't be "
+            f"answered from the data. "
+            f"Respond in {language_name}."
         )
 
         context_block = self._build_context_prompt(context)
@@ -160,6 +164,11 @@ class HealthAssistant:
             "generationConfig": {
                 "temperature": 0.3,
                 "maxOutputTokens": 512,
+                # Gemini 2.5 Flash "thinks" before answering by default, which adds
+                # ~20-25s to a simple grounded lookup. Disable it — these answers
+                # are direct reads over the supplied context, no reasoning budget
+                # needed — cutting latency to a few seconds.
+                "thinkingConfig": {"thinkingBudget": 0},
             },
         }
 

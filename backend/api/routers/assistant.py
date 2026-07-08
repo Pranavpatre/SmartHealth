@@ -40,7 +40,7 @@ _phc_admin_plus = require_role("PHC_ADMIN", "DISTRICT_OFFICER", "STATE_ADMIN", "
 class AssistantQueryRequest(BaseModel):
     question: str = Field(
         ...,
-        min_length=3,
+        min_length=1,
         max_length=500,
         description="Natural-language question about district health",
     )
@@ -400,10 +400,11 @@ async def query_assistant(
     settings = get_settings()
 
     assistant = HealthAssistant(api_key=settings.gemini_api_key or None)
-    answer = assistant.ask(
-        question=body.question,
-        context=context,
-        language=body.language,
+    # ask() makes a blocking HTTP call to Gemini — run it off the event loop so a
+    # single in-flight question doesn't stall other requests (dashboard polling etc.).
+    from starlette.concurrency import run_in_threadpool
+    answer = await run_in_threadpool(
+        assistant.ask, question=body.question, context=context, language=body.language,
     )
 
     # Record which live data sources contributed to the answer
