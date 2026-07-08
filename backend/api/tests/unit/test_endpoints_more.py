@@ -1,7 +1,8 @@
 """More endpoint coverage: health-scores, referral OTP/visit-note flow,
 redistribution/predict/notifications read paths. Reuses the `ctx` fixture."""
 import pytest
-from tests.unit.test_endpoints_api import ctx, H  # noqa: F401  (fixture reuse)
+def H(t):
+    return {"Authorization": f"Bearer {t}"}
 
 
 @pytest.mark.anyio
