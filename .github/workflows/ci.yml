@@ -79,14 +79,23 @@ jobs:
         run: pip install -r requirements.txt
         working-directory: backend/api
 
-      - name: Apply migrations
-        run: alembic upgrade head
-        working-directory: backend/api
+      - name: Apply schema
+        # Build the schema from data/schemas/*.sql — the same SQL the app is
+        # actually deployed with (Cloud SQL / local). The alembic migration is
+        # a divergent artifact that doesn't run cleanly; the SQL files are the
+        # source of truth and include the latest-score materialized views (008).
+        run: |
+          for f in 001_core 003_state_infrastructure 004_staff_attendance \
+                   005_district_footfall 006_beds_and_tests \
+                   007_district_hmis_metrics 008_latest_score_matviews; do
+            echo "== applying $f.sql =="
+            PGPASSWORD=smarthealth_test psql -h localhost -U smarthealth \
+              -d smarthealth_test -v ON_ERROR_STOP=1 -f "data/schemas/$f.sql"
+          done
 
       - name: Seed test data
         run: |
-          PGPASSWORD=smarthealth_test psql -h localhost -U smarthealth -d smarthealth_test -f ../../data/schemas/002_seed_demo.sql
-        working-directory: backend/api
+          PGPASSWORD=smarthealth_test psql -h localhost -U smarthealth -d smarthealth_test -f data/schemas/002_seed_demo.sql
 
       - name: Run tests
         run: pytest --cov=. --cov-report=xml --cov-fail-under=60 -x
