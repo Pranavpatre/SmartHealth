@@ -16,6 +16,8 @@ Endpoints (prefix /planning):
 
 from __future__ import annotations
 
+import csv
+import io
 import math
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -227,17 +229,10 @@ class CapacityItem(BaseModel):
     metric: str
 
 
-@router.get("/capacity", response_model=list[CapacityItem])
-async def planning_capacity(
-    state_id: int | None = Query(None),
-    district_id: int | None = Query(None),
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(_field_plus),
-) -> list[CapacityItem]:
+async def _compute_capacity(db: AsyncSession, where_sql: str, params: dict) -> list[CapacityItem]:
     """Long-term structural concerns: facilities running near bed capacity or
     understaffed relative to their patient load. These aren't 'order more stock'
     fixes — they're beds/doctors asks for the district plan."""
-    where_sql, params = _resolve_scope(current_user, state_id, district_id)
     rows = (
         await db.execute(
             sa_text(
@@ -282,6 +277,40 @@ async def planning_capacity(
     return out
 
 
+@router.get("/capacity", response_model=list[CapacityItem])
+async def planning_capacity(
+    state_id: int | None = Query(None),
+    district_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(_field_plus),
+) -> list[CapacityItem]:
+    where_sql, params = _resolve_scope(current_user, state_id, district_id)
+    return await _compute_capacity(db, where_sql, params)
+
+
+@router.get("/capacity.csv")
+async def planning_capacity_csv(
+    concern: str | None = Query(None, description="DOCTORS | BEDS (both if omitted)"),
+    state_id: int | None = Query(None),
+    district_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(_field_plus),
+) -> Response:
+    where_sql, params = _resolve_scope(current_user, state_id, district_id)
+    items = await _compute_capacity(db, where_sql, params)
+    if concern:
+        items = [i for i in items if i.concern == concern.upper()]
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["District", "Facility", "Code", "Address", "Concern", "Detail", "Metric"])
+    for i in items:
+        w.writerow([i.district, i.facility, i.code, i.address, i.concern, i.detail, i.metric])
+    label = (concern or "capacity").lower()
+    fname = f"planning_{label}_{date.today().isoformat()}.csv"
+    return Response(content=buf.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Doctor redistribution — move surplus doctors to nearby short-staffed facilities
 # ─────────────────────────────────────────────────────────────────────────────
@@ -306,17 +335,10 @@ class DoctorMove(BaseModel):
     distance_km: float
 
 
-@router.get("/doctor-redistribution", response_model=list[DoctorMove])
-async def planning_doctor_redistribution(
-    state_id: int | None = Query(None),
-    district_id: int | None = Query(None),
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(_field_plus),
-) -> list[DoctorMove]:
+async def _compute_redistribution(db: AsyncSession, where_sql: str, params: dict) -> list[DoctorMove]:
     """Propose moving doctors from over-staffed facilities to nearby (< 50 km)
     short-staffed ones within scope. Staffing need ≈ OPD load ÷ 50 patients/doctor;
     surplus (roster − need ≥ 1) is matched greedily to the nearest shortage."""
-    where_sql, params = _resolve_scope(current_user, state_id, district_id)
     rows = (
         await db.execute(
             sa_text(
@@ -376,3 +398,35 @@ async def planning_doctor_redistribution(
             sh["deficit"] -= move
             best["extra"] -= move
     return moves
+
+
+@router.get("/doctor-redistribution", response_model=list[DoctorMove])
+async def planning_doctor_redistribution(
+    state_id: int | None = Query(None),
+    district_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(_field_plus),
+) -> list[DoctorMove]:
+    where_sql, params = _resolve_scope(current_user, state_id, district_id)
+    return await _compute_redistribution(db, where_sql, params)
+
+
+@router.get("/doctor-redistribution.csv")
+async def planning_doctor_redistribution_csv(
+    state_id: int | None = Query(None),
+    district_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(_field_plus),
+) -> Response:
+    where_sql, params = _resolve_scope(current_user, state_id, district_id)
+    moves = await _compute_redistribution(db, where_sql, params)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Doctors", "From facility", "From district", "To facility",
+                "To district", "To address", "Distance (km)"])
+    for m in moves:
+        w.writerow([m.doctors, m.from_facility, m.from_district, m.to_facility,
+                    m.to_district, m.to_address, m.distance_km])
+    fname = f"doctor_redistribution_{date.today().isoformat()}.csv"
+    return Response(content=buf.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{fname}"'})

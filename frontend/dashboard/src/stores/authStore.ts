@@ -32,6 +32,12 @@ interface AuthState {
   }) => void
   dismissNavTour: () => void
   startNavTour: () => void
+  setLocation: (loc: {
+    districtId?: number | null
+    districtName?: string | null
+    stateId?: number | null
+    stateName?: string | null
+  }) => void
   logout: () => void
 }
 
@@ -63,6 +69,7 @@ export const useAuthStore = create<AuthState>()(
         }),
       dismissNavTour: () => set({ showNavTour: false }),
       startNavTour: () => set({ showNavTour: true }),
+      setLocation: (loc) => set((s) => ({ ...s, ...loc })),
       logout: () =>
         set({
           token: null,

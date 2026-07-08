@@ -1,9 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getFacilities, getFacilityStats, getFacilitiesMap, getAtRiskFacilities } from '../api/facilities'
 import { getAlerts } from '../api/alerts'
+import { apiClient } from '../api/client'
+import { useAuthStore } from '../stores/authStore'
 import FacilityMap from '../components/FacilityMap'
 import NationalBeds from '../components/NationalBeds'
-import NearestFacilities from '../components/NearestFacilities'
 import AlertCard from '../components/AlertCard'
 import DataBadge from '../components/DataBadge'
 import InfoNote from '../components/InfoNote'
@@ -14,6 +16,35 @@ import { formatNumber } from '../lib/format'
 export default function DashboardPage() {
   const { t } = useTranslation()
   useAlertWebSocket()
+
+  // Follow the officer's ACTUAL location instead of a static assigned district:
+  // once per session, resolve GPS → nearest facility's district on the server,
+  // persist it, and re-scope the dashboard. Silent if GPS is denied/unavailable.
+  const qc = useQueryClient()
+  const { role, districtId, setLocation } = useAuthStore()
+  useEffect(() => {
+    if (role !== 'DISTRICT_OFFICER') return
+    if (sessionStorage.getItem('geo_scoped') || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { data } = await apiClient.post('/auth/me/location', {
+            lat: pos.coords.latitude, lng: pos.coords.longitude,
+          })
+          sessionStorage.setItem('geo_scoped', '1')
+          if (data.district_id && data.district_id !== districtId) {
+            setLocation({
+              districtId: data.district_id, districtName: data.district_name,
+              stateId: data.state_id, stateName: data.state_name,
+            })
+            qc.invalidateQueries()
+          }
+        } catch { /* keep assigned scope */ }
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
+    )
+  }, [role, districtId, setLocation, qc])
 
   const { data: facilities = [], isLoading: facilitiesLoading } = useQuery({
     queryKey: ['facilities'],
@@ -217,12 +248,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Find nearest PHCs/CHCs (Google Maps / GPS) */}
-      <div data-tour="nearest">
-        <NearestFacilities />
-      </div>
-
-      {/* National / State-UT bed infrastructure (real data.gov.in) */}
+      {/* State-UT bed infrastructure (real data.gov.in) */}
       <div data-tour="beds">
         <NationalBeds />
       </div>

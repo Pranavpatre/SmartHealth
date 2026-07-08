@@ -66,15 +66,24 @@ export const getDoctorRedistribution = async (scope: Scope) => {
   return data
 }
 
-// Fetch the supplier-ready CSV (with addresses) and trigger a browser download.
-export const downloadRefillsCsv = async (scope: Scope) => {
-  const res = await apiClient.get('/planning/refills.csv', { params: scope, responseType: 'blob' })
+// Fetch a CSV endpoint (with addresses) and trigger a browser download.
+const downloadCsv = async (path: string, params: Record<string, unknown>, name: string) => {
+  const res = await apiClient.get(path, { params, responseType: 'blob' })
   const url = URL.createObjectURL(res.data as Blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `planning_refills_${new Date().toISOString().slice(0, 10)}.csv`
+  a.download = `${name}_${new Date().toISOString().slice(0, 10)}.csv`
   document.body.appendChild(a)
   a.click()
   a.remove()
   URL.revokeObjectURL(url)
 }
+
+export const downloadRefillsCsv = (scope: Scope) =>
+  downloadCsv('/planning/refills.csv', scope, 'planning_refills')
+
+export const downloadCapacityCsv = (scope: Scope, concern: 'DOCTORS' | 'BEDS') =>
+  downloadCsv('/planning/capacity.csv', { ...scope, concern }, `planning_${concern.toLowerCase()}`)
+
+export const downloadRedistributionCsv = (scope: Scope) =>
+  downloadCsv('/planning/doctor-redistribution.csv', scope, 'doctor_redistribution')

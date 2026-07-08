@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { apiClient } from '../api/client'
 import { speechToText, textToSpeech } from '../api/speech'
 import { formatClock } from '../lib/format'
+import { useAssistantStore } from '../stores/assistantStore'
 
 const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -29,7 +30,7 @@ interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  timestamp: Date
+  timestamp: number
 }
 
 function LoadingDots() {
@@ -48,16 +49,10 @@ function LoadingDots() {
 
 export default function AssistantPage() {
   const { t } = useTranslation()
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '0',
-      role: 'assistant',
-      content: t('assistant.greeting'),
-      timestamp: new Date(),
-    },
-  ])
+  // Chat state lives in a store so it survives tab navigation (see assistantStore).
+  const { messages, language, addMessage, setLanguage, initGreeting, clear } = useAssistantStore()
+  useEffect(() => { initGreeting(t('assistant.greeting')) }, [initGreeting, t])
   const [input, setInput] = useState('')
-  const [language, setLanguage] = useState('en')
   const [loading, setLoading] = useState(false)
   const [recording, setRecording] = useState(false)
   const [voiceBusy, setVoiceBusy] = useState(false) // transcribing
@@ -125,9 +120,9 @@ export default function AssistantPage() {
       id: crypto.randomUUID(),
       role: 'user',
       content: question.trim(),
-      timestamp: new Date(),
+      timestamp: Date.now(),
     }
-    setMessages((prev) => [...prev, userMsg])
+    addMessage(userMsg)
     setInput('')
     setLoading(true)
 
@@ -137,22 +132,20 @@ export default function AssistantPage() {
         language,
       })
 
-      const assistantMsg: Message = {
+      addMessage({
         id: crypto.randomUUID(),
         role: 'assistant',
         content: data.answer,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, assistantMsg])
+        timestamp: Date.now(),
+      })
       if (speak) await speakAnswer(data.answer)
     } catch {
-      const errorMsg: Message = {
+      addMessage({
         id: crypto.randomUUID(),
         role: 'assistant',
         content: t('assistant.error'),
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, errorMsg])
+        timestamp: Date.now(),
+      })
     } finally {
       setLoading(false)
       inputRef.current?.focus()
@@ -166,7 +159,7 @@ export default function AssistantPage() {
     }
   }
 
-  const formatTime = (d: Date) => formatClock(d)
+  const formatTime = (ts: number) => formatClock(new Date(ts))
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] max-w-3xl mx-auto">
@@ -175,8 +168,14 @@ export default function AssistantPage() {
           <h1 className="text-xl font-bold text-gray-900">{t('assistant.title')}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{t('assistant.subtitle')}</p>
         </div>
-        <div>
-          <label className="text-xs font-medium text-gray-500 mr-2">{t('assistant.response_language')}</label>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { clear(); initGreeting(t('assistant.greeting')) }}
+            className="text-xs text-gray-500 hover:text-teal-700 border border-gray-200 rounded-lg px-2.5 py-1.5"
+          >
+            {t('assistant.new_chat', 'New chat')}
+          </button>
+          <label className="text-xs font-medium text-gray-500 mr-1">{t('assistant.response_language')}</label>
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
@@ -239,6 +238,7 @@ export default function AssistantPage() {
             </div>
             <div className="bg-gray-100 rounded-2xl rounded-tl-sm">
               <LoadingDots />
+              <p className="px-4 pb-2 -mt-1 text-xs text-gray-400">{t('assistant.thinking_hint', 'Analyzing live district data… this can take up to ~30s.')}</p>
             </div>
           </div>
         )}

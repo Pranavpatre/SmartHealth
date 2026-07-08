@@ -7,7 +7,7 @@ from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.jwt import create_access_token, create_refresh_token, decode_token
+from auth.jwt import create_access_token, create_refresh_token, decode_token, get_current_user
 from config import get_settings
 from db import get_db
 from models.user import User
@@ -189,4 +189,61 @@ async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)
         facility_id=str(user.facility_id) if user.facility_id else None,
         facility_name=facility_name,
         language_pref=user.language_pref,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Set the caller's working location from GPS coordinates.
+# Lets the dashboard follow the user's ACTUAL location (nearest facility's
+# district) instead of a static assigned district. Persisted on the user row so
+# every scoped view (dashboard/facilities/planning) re-scopes accordingly.
+# ---------------------------------------------------------------------------
+
+class SetLocationRequest(BaseModel):
+    lat: float
+    lng: float
+
+
+class SetLocationResponse(BaseModel):
+    district_id: int | None
+    district_name: str | None
+    state_id: int | None
+    state_name: str | None
+
+
+@router.post("/me/location", response_model=SetLocationResponse)
+async def set_my_location(
+    body: SetLocationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import text as _sa_text
+
+    # Nearest facility to the caller's GPS → its district (+ state) via PostGIS KNN.
+    geo = (await db.execute(
+        _sa_text(
+            """
+            SELECT d.id AS district_id, d.name AS district_name,
+                   s.id AS state_id, s.name AS state_name
+            FROM facilities f
+            JOIN districts d ON d.id = f.district_id
+            JOIN states s ON s.id = d.state_id
+            WHERE f.location IS NOT NULL
+            ORDER BY f.location <-> ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)
+            LIMIT 1
+            """
+        ),
+        {"lat": body.lat, "lng": body.lng},
+    )).mappings().first()
+
+    if not geo:
+        raise HTTPException(status_code=404, detail="No facility near this location.")
+
+    # Persist so all server-scoped views (dashboard/facilities/planning) follow it.
+    current_user.district_id = geo["district_id"]
+    await db.commit()
+
+    return SetLocationResponse(
+        district_id=geo["district_id"], district_name=geo["district_name"],
+        state_id=geo["state_id"], state_name=geo["state_name"],
     )
