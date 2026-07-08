@@ -241,11 +241,14 @@ async def list_facilities(
     params: dict[str, Any] = {}
     if current_user.role not in ("STATE_ADMIN", "SUPERADMIN"):
         if current_user.district_id is not None:
-            where.append("f.district_id = :uds"); params["uds"] = current_user.district_id
+            where.append("f.district_id = :uds")
+            params["uds"] = current_user.district_id
         elif current_user.facility_id is not None:
-            where.append("f.id = :ufid"); params["ufid"] = str(current_user.facility_id)
+            where.append("f.id = :ufid")
+            params["ufid"] = str(current_user.facility_id)
     if district_id is not None:
-        where.append("f.district_id = :did"); params["did"] = district_id
+        where.append("f.district_id = :did")
+        params["did"] = district_id
     if facility_type is not None:
         valid_types = {"PHC", "CHC", "SUB_CENTRE", "DISTRICT_HOSPITAL"}
         if facility_type.upper() not in valid_types:
@@ -253,7 +256,8 @@ async def list_facilities(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid facility_type. Must be one of: {', '.join(sorted(valid_types))}",
             )
-        where.append("f.facility_type = :ft"); params["ft"] = facility_type.upper()
+        where.append("f.facility_type = :ft")
+        params["ft"] = facility_type.upper()
     where_sql = (" WHERE " + " AND ".join(where)) if where else ""
     params["lim"] = page_size
     params["off"] = (page - 1) * page_size
@@ -666,19 +670,26 @@ async def browse_facilities(
     # scope non-privileged users to their own district / facility
     if current_user.role not in ("STATE_ADMIN", "SUPERADMIN"):
         if getattr(current_user, "district_id", None) is not None:
-            where.append("f.district_id = :uds"); params["uds"] = current_user.district_id
+            where.append("f.district_id = :uds")
+            params["uds"] = current_user.district_id
         elif getattr(current_user, "facility_id", None) is not None:
-            where.append("f.id = :ufid"); params["ufid"] = current_user.facility_id
+            where.append("f.id = :ufid")
+            params["ufid"] = current_user.facility_id
     if state_id is not None:
-        where.append("d.state_id = :sid"); params["sid"] = state_id
+        where.append("d.state_id = :sid")
+        params["sid"] = state_id
     if district_id is not None:
-        where.append("f.district_id = :did"); params["did"] = district_id
+        where.append("f.district_id = :did")
+        params["did"] = district_id
     if facility_type is not None:
-        where.append("f.facility_type = :ft"); params["ft"] = facility_type.upper()
+        where.append("f.facility_type = :ft")
+        params["ft"] = facility_type.upper()
     if status_light is not None:
-        where.append("hs.status = :st"); params["st"] = status_light.upper()
+        where.append("hs.status = :st")
+        params["st"] = status_light.upper()
     if search:
-        where.append("f.name ILIKE :q"); params["q"] = f"%{search}%"
+        where.append("f.name ILIKE :q")
+        params["q"] = f"%{search}%"
     where_sql = (" WHERE " + " AND ".join(where)) if where else ""
 
     # Latest score and latest snapshot both come from materialized views (see
