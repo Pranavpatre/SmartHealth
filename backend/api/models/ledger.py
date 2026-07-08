@@ -1,7 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
+from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, func
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,6 +23,8 @@ class FacilityBed(Base):
     )
     total_beds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     occupied_beds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Expected date the occupied beds free up (field-entered) — see 013_*.sql.
+    occupied_until: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

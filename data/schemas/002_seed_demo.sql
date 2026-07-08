@@ -45,9 +45,9 @@ INSERT INTO diagnostic_tests (name, category, unit, reorder_level) VALUES
 ('HIV Rapid Test',  'Infectious Disease', 'kits',   15),
 ('Pregnancy Test',  'Reproductive Health','kits',   25);
 
--- Demo district officer user
+-- Demo district officer user (an administrator, not a clinician)
 INSERT INTO users (facility_id, district_id, role, name, phone, language_pref) VALUES
-(NULL, (SELECT id FROM districts WHERE code='MH-PUNE'), 'DISTRICT_OFFICER', 'Dr. Anand Kulkarni', '+919876543210', 'mr');
+(NULL, (SELECT id FROM districts WHERE code='MH-PUNE'), 'DISTRICT_OFFICER', 'Rajesh Deshmukh', '+919876543210', 'mr');
 
 -- Demo field workers (one per PHC)
 INSERT INTO users (facility_id, district_id, role, name, phone, language_pref)

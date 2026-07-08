@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { getFacility, getFacilityAttendance, getFacilityBeds, getFacilityTests, getDemandForecast, type StockItem } from '../api/facilities'
+import { getDoctors } from '../api/resources'
 import type { Alert } from '../api/alerts'
 import { formatNumber, formatDecimal, formatRelativeTime } from '../lib/format'
 import DataBadge from '../components/DataBadge'
@@ -66,6 +67,11 @@ export default function FacilityDetailPage() {
     enabled: !!id,
   })
 
+  const { data: doctors = [] } = useQuery({
+    queryKey: ['facility-doctors', id],
+    queryFn: () => getDoctors(id!),
+    enabled: !!id,
+  })
   const { data: bedMatrix } = useQuery({
     queryKey: ['facility-beds', id],
     queryFn: () => getFacilityBeds(id!),
@@ -192,6 +198,28 @@ export default function FacilityDetailPage() {
               {t('detail.zero_attendance', { days: formatNumber(attendance.days_since_last_present) })}
             </p>
           )}
+        </div>
+      )}
+
+      {/* Doctors on roster (names + today's attendance) */}
+      {doctors.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            {t('detail.doctors_title', 'Doctors on roster')}
+            <span className="text-xs font-normal text-gray-400">
+              {doctors.filter((d) => d.present_today).length}/{doctors.length} {t('detail.present_today_lc', 'present today')}
+            </span>
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {doctors.map((d) => (
+              <div key={d.id} className="flex items-center justify-between border border-gray-100 rounded-lg px-3 py-2">
+                <span className="text-sm text-gray-800">{d.name}{d.specialty ? <span className="text-gray-400"> · {d.specialty}</span> : null}</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${d.present_today ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {d.present_today ? t('stockview.present', 'Present') : t('stockview.absent', 'Absent')}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

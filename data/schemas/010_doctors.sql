@@ -28,12 +28,17 @@ CREATE INDEX IF NOT EXISTS idx_doctor_attendance_fac_date
 
 -- Seed a couple of demo doctors for each seeded facility so the roster isn't
 -- empty on first use (only where none exist yet).
+-- Two demo doctors per facility, names varied per-facility (deterministic hash
+-- into a name pool) so the roster looks realistic rather than the same two names
+-- everywhere. These are the clinicians on staff (distinct from the admin users).
 INSERT INTO doctors (facility_id, name, specialty)
-SELECT f.id, d.name, d.specialty
+SELECT f.id,
+       (ARRAY['Dr. Priya Sharma','Dr. Rahul Verma','Dr. Anjali Nair','Dr. Vikram Singh',
+              'Dr. Meera Iyer','Dr. Arjun Reddy','Dr. Kavita Joshi','Dr. Sanjay Gupta',
+              'Dr. Neha Deshpande','Dr. Amit Patil','Dr. Sunita Rao','Dr. Rajesh Menon'])
+             [1 + ((abs(hashtext(f.id::text)) + g) % 12)],
+       (ARRAY['General Medicine','Pediatrics','Obstetrics','General Medicine'])[1 + (g % 4)]
 FROM facilities f
-CROSS JOIN (VALUES
-    ('Dr. A. Kulkarni', 'General Medicine'),
-    ('Dr. S. Rao', 'Pediatrics')
-) AS d(name, specialty)
+CROSS JOIN generate_series(0, 1) g
 WHERE NOT EXISTS (SELECT 1 FROM doctors dd WHERE dd.facility_id = f.id)
   AND f.facility_type IN ('PHC', 'CHC');

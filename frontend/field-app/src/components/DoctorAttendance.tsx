@@ -22,8 +22,6 @@ export default function DoctorAttendance() {
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [marks, setMarks] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
-  const [adding, setAdding] = useState(false)
-  const [newName, setNewName] = useState('')
   const [saved, setSaved] = useState(false)
 
   const load = useCallback(async () => {
@@ -44,14 +42,6 @@ export default function DoctorAttendance() {
 
   const setPresent = (id: string, present: boolean) =>
     setMarks((m) => ({ ...m, [id]: present }))
-
-  const addDoctor = async () => {
-    if (!newName.trim() || !facilityId) return
-    const r = await fetch(`${API}/api/v1/doctors/facility/${facilityId}`, {
-      method: 'POST', headers: hdr, body: JSON.stringify({ name: newName.trim() }),
-    })
-    if (r.ok) { setNewName(''); setAdding(false); await load() }
-  }
 
   const save = async () => {
     if (!facilityId) return
@@ -99,19 +89,6 @@ export default function DoctorAttendance() {
             </div>
           ))}
         </div>
-      )}
-
-      {adding ? (
-        <div className="flex gap-2">
-          <input value={newName} onChange={(e) => setNewName(e.target.value)}
-            placeholder={t('attendance.doctorName')} autoFocus
-            className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-teal-500" />
-          <button onClick={addDoctor} disabled={!newName.trim()}
-            className="px-3 py-2 rounded-xl bg-teal-600 text-white text-sm font-semibold disabled:opacity-40">{t('attendance.add')}</button>
-          <button onClick={() => { setAdding(false); setNewName('') }} className="px-2 text-gray-400">✕</button>
-        </div>
-      ) : (
-        <button onClick={() => setAdding(true)} className="text-sm text-teal-600 font-medium">+ {t('attendance.addDoctor')}</button>
       )}
 
       <button onClick={save} disabled={doctors.length === 0}

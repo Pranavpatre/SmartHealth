@@ -5,9 +5,9 @@ import { useAuthStore } from '../stores/authStore'
 import { queueLedger, syncPendingData } from '../sync/syncService'
 import InfoNote from './InfoNote'
 
-// Bed matrix + test availability — these are facility "resources", so they live
-// in the Stock tab alongside medicine stock. Manual entry by the field worker,
-// offline-first (queued + synced like the rest).
+// Bed matrix + test availability — daily field-worker inputs (in the Daily Entry
+// tab). Beds also capture an "occupied until" date so the admin dashboard can
+// project future availability. Offline-first (queued + synced like the rest).
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function BedTestEntry() {
@@ -15,7 +15,7 @@ export default function BedTestEntry() {
   const { facilityId, token } = useAuthStore()
   const authHdr = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 
-  const [beds, setBeds] = useState<{ bed_type: string; total_beds: number; occupied_beds: number }[]>([])
+  const [beds, setBeds] = useState<{ bed_type: string; total_beds: number; occupied_beds: number; occupied_until: string | null }[]>([])
   const [bedsSaved, setBedsSaved] = useState(false)
   const [tests, setTests] = useState<{ test_id: number; test_name: string | null; available: boolean }[]>([])
   const [testsSaved, setTestsSaved] = useState(false)
@@ -36,6 +36,10 @@ export default function BedTestEntry() {
   const setOccupied = (bedType: string, delta: number) =>
     setBeds((prev) => prev.map((b) => b.bed_type === bedType
       ? { ...b, occupied_beds: Math.max(0, Math.min(b.total_beds, b.occupied_beds + delta)) } : b))
+
+  const setOccupiedUntil = (bedType: string, value: string) =>
+    setBeds((prev) => prev.map((b) => b.bed_type === bedType
+      ? { ...b, occupied_until: value || null } : b))
 
   const saveBeds = async () => {
     if (!facilityId) return
@@ -63,18 +67,28 @@ export default function BedTestEntry() {
         {loading && beds.length === 0 ? (
           <p className="text-sm text-gray-400">…</p>
         ) : beds.map((b) => (
-          <div key={b.bed_type} className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-800">{b.bed_type}</p>
-              <p className="text-xs text-gray-400">{b.occupied_beds} / {b.total_beds} occupied</p>
+          <div key={b.bed_type} className="space-y-1.5 border-b border-gray-50 pb-3 last:border-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-800">{b.bed_type}</p>
+                <p className="text-xs text-gray-400">{b.occupied_beds} / {b.total_beds} {t('beds.occupied', 'occupied')} · {Math.max(0, b.total_beds - b.occupied_beds)} {t('beds.empty', 'empty')}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setOccupied(b.bed_type, -1)} disabled={b.total_beds === 0}
+                  className="w-9 h-9 rounded-lg bg-gray-100 text-gray-700 font-bold text-lg disabled:opacity-30">−</button>
+                <span className="w-8 text-center font-bold text-gray-900">{b.occupied_beds}</span>
+                <button onClick={() => setOccupied(b.bed_type, 1)} disabled={b.total_beds === 0}
+                  className="w-9 h-9 rounded-lg bg-gray-100 text-gray-700 font-bold text-lg disabled:opacity-30">+</button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setOccupied(b.bed_type, -1)} disabled={b.total_beds === 0}
-                className="w-9 h-9 rounded-lg bg-gray-100 text-gray-700 font-bold text-lg disabled:opacity-30">−</button>
-              <span className="w-8 text-center font-bold text-gray-900">{b.occupied_beds}</span>
-              <button onClick={() => setOccupied(b.bed_type, 1)} disabled={b.total_beds === 0}
-                className="w-9 h-9 rounded-lg bg-gray-100 text-gray-700 font-bold text-lg disabled:opacity-30">+</button>
-            </div>
+            {b.occupied_beds > 0 && (
+              <label className="flex items-center justify-between gap-2 text-xs text-gray-500">
+                {t('beds.freeBy', 'Occupied until')}
+                <input type="date" value={b.occupied_until ?? ''}
+                  onChange={(e) => setOccupiedUntil(b.bed_type, e.target.value)}
+                  className="border-2 border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-teal-500" />
+              </label>
+            )}
           </div>
         ))}
         <button onClick={saveBeds} className="w-full py-2.5 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors">
