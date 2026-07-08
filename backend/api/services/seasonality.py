@@ -31,6 +31,7 @@ _WINTER = {11, 12, 1, 2}
 _SUMMER = {3, 4, 5}
 
 # Categories whose demand rises with heavy rainfall (waterborne/vector-borne).
+_WEATHER_CACHE: dict = {}  # {(lat1, lng1): {"rain": x, "heat": y}} process-lifetime
 RAIN_SENSITIVE = {"ORS", "ANTIMALARIAL", "ANTIBIOTIC"}
 # Categories whose demand rises in extreme heat (dehydration).
 HEAT_SENSITIVE = {"ORS"}
@@ -87,13 +88,20 @@ def fetch_weather_factor(lat: float | None, lng: float | None) -> dict[str, floa
     key = os.environ.get("OPENWEATHER_API_KEY")
     if not key or lat is None or lng is None:
         return neutral
+    # Process-lifetime cache keyed by ~11km grid cell — avoids a live HTTP call on
+    # every planning request (the dominant latency), since weather barely varies
+    # within a district over a planning run.
+    ck = (round(lat, 1), round(lng, 1))
+    cached = _WEATHER_CACHE.get(ck)
+    if cached is not None:
+        return cached
     try:
         import httpx
 
         r = httpx.get(
             "https://api.openweathermap.org/data/2.5/forecast",
             params={"lat": lat, "lon": lng, "appid": key, "units": "metric", "cnt": 16},
-            timeout=6.0,
+            timeout=4.0,
         )
         r.raise_for_status()
         entries = r.json().get("list", [])
@@ -105,9 +113,12 @@ def fetch_weather_factor(lat: float | None, lng: float | None) -> dict[str, floa
         # spike lifts dehydration demand. Bounded, gentle nudges.
         rain = 1.0 + min(rain_mm / 100.0, 0.4)   # +40% cap at ≥100mm
         heat = 1.0 + (0.25 if max_temp >= 40 else 0.0)
-        return {"rain": round(rain, 3), "heat": round(heat, 3)}
+        result = {"rain": round(rain, 3), "heat": round(heat, 3)}
+        _WEATHER_CACHE[ck] = result
+        return result
     except Exception as exc:  # noqa: BLE001 - never fail planning on weather
         log.info("weather_fetch_failed", error=str(exc))
+        _WEATHER_CACHE[ck] = neutral  # don't retry a failing call every request
         return neutral
 
 

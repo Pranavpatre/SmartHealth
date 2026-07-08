@@ -87,7 +87,7 @@ async def _historical_index(db: AsyncSession, where_sql: str, params: dict, mont
                 FROM daily_snapshots ds
                 JOIN facilities f ON f.id = ds.facility_id
                 JOIN districts d ON d.id = f.district_id
-                WHERE ds.time >= NOW() - INTERVAL '2 years' AND {where_sql}
+                WHERE ds.time >= NOW() - INTERVAL '1 year' AND {where_sql}
                 """
             ),
             {**params, "m": month},
