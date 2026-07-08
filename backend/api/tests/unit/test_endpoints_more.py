@@ -201,3 +201,11 @@ async def test_planning_csv_download(ctx):
     r = await client.get("/api/v1/planning/refills.csv", headers=H(tk["do"]))
     assert r.status_code == 200
     assert "text/csv" in r.headers.get("content-type", "")
+
+
+@pytest.mark.anyio
+async def test_planning_doctor_redistribution(ctx):
+    client, tk, _ = ctx
+    r = await client.get("/api/v1/planning/doctor-redistribution", headers=H(tk["do"]))
+    assert r.status_code == 200
+    assert isinstance(r.json(), list)  # list of proposed doctor moves (may be empty)

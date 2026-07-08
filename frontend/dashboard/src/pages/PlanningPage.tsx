@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { getRefills, getCapacity, downloadRefillsCsv } from '../api/planning'
+import { getRefills, getCapacity, getDoctorRedistribution, downloadRefillsCsv } from '../api/planning'
 import { getStates, getDistricts } from '../api/facilities'
 import { useAuthStore } from '../stores/authStore'
 import { formatNumber } from '../lib/format'
@@ -46,9 +46,15 @@ export default function PlanningPage() {
     queryKey: ['planning-capacity', ...scopeKey],
     queryFn: () => getCapacity(scope), enabled: ready,
   })
+  const { data: moves = [] } = useQuery({
+    queryKey: ['planning-docmoves', ...scopeKey],
+    queryFn: () => getDoctorRedistribution(scope), enabled: ready,
+  })
 
   const items = refills?.items ?? []
   const highCount = items.filter((i) => i.urgency === 'HIGH').length
+  const doctorItems = capacity.filter((c) => c.concern === 'DOCTORS')
+  const bedItems = capacity.filter((c) => c.concern === 'BEDS')
 
   const onDownload = async () => {
     setDownloading(true)
@@ -102,24 +108,20 @@ export default function PlanningPage() {
           {t('planning.select_scope', 'Select a state or district to generate the plan.')}
         </div>
       ) : (
-        <>
-          {/* Refills — the pre-emptive order list */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-gray-800">
-                {t('planning.refills_title', 'Stock refills needed')}
-                {refills && (
-                  <span className="ml-2 text-xs font-normal text-gray-400">
-                    {t('planning.horizon_note', { defaultValue: 'next {{d}} days', d: refills.horizon_days })}
-                    {highCount > 0 && ` · ${highCount} ${t('planning.urgent', 'urgent')}`}
-                  </span>
-                )}
-              </h2>
-            </div>
+        <div className="space-y-3">
+          {/* 1) Stock refills — collapsed by default (this list can be long) */}
+          <Section
+            title={t('planning.refills_title', 'Stock refills needed')}
+            count={items.length}
+            tone={items.length ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}
+            subtitle={refills
+              ? `${t('planning.horizon_note', { defaultValue: 'next {{d}} days', d: refills.horizon_days })}${highCount ? ` · ${highCount} ${t('planning.urgent', 'urgent')}` : ''}`
+              : undefined}
+          >
             {isLoading ? (
-              <p className="text-gray-400 text-sm p-4">{t('facilities.loading')}</p>
+              <p className="text-gray-400 text-sm p-2">{t('facilities.loading')}</p>
             ) : items.length === 0 ? (
-              <p className="text-gray-400 text-sm p-4">{t('planning.no_refills', 'No refills projected in this window — all facilities are covered.')}</p>
+              <p className="text-gray-400 text-sm p-2">{t('planning.no_refills', 'No refills projected in this window — all facilities are covered.')}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -151,35 +153,114 @@ export default function PlanningPage() {
                 </table>
               </div>
             )}
-          </div>
+          </Section>
 
-          {/* Long-term capacity concerns */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
-            <h2 className="font-semibold text-gray-800">
-              {t('planning.capacity_title', 'Longer-term capacity concerns')}
-              <span className="ml-2 text-xs font-normal text-gray-400">{t('planning.capacity_note', 'beds & doctors')}</span>
-            </h2>
-            {capacity.length === 0 ? (
-              <p className="text-gray-400 text-sm p-2">{t('planning.no_capacity', 'No structural bed/doctor gaps flagged.')}</p>
+          {/* 2) Doctor requirement + redistribution plan */}
+          <Section
+            title={t('planning.doctors_title', 'Doctor requirement')}
+            count={doctorItems.length}
+            tone={doctorItems.length ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}
+            subtitle={moves.length ? `${moves.length} ${t('planning.redistribution_moves', 'redistribution moves')}` : undefined}
+          >
+            {doctorItems.length === 0 ? (
+              <p className="text-gray-400 text-sm p-2">{t('planning.no_doctor_gap', 'No facilities under-staffed on doctors.')}</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {capacity.map((c) => (
-                  <div key={`${c.facility_id}-${c.concern}`} className="border border-gray-200 rounded-xl p-3">
+                {doctorItems.map((c) => (
+                  <div key={c.facility_id} className="border border-gray-200 rounded-xl p-3">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-gray-900">{c.facility}</span>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${c.concern === 'BEDS' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {c.concern === 'BEDS' ? t('planning.beds', '🛏 Beds') : t('planning.doctors', '🩺 Doctors')}
-                      </span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{c.metric}</span>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">{c.detail}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{c.metric} · {c.address || c.district}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{c.address || c.district}</p>
                   </div>
                 ))}
               </div>
             )}
-          </div>
-        </>
+
+            {/* Doctor redistribution plan — move surplus doctors to nearby shortages */}
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                {t('planning.redistribution_title', 'Doctor redistribution plan')}
+                <span className="ml-2 text-xs font-normal text-gray-400">{t('planning.redistribution_note', 'surplus → nearby shortage (≤ 50 km)')}</span>
+              </h3>
+              {moves.length === 0 ? (
+                <p className="text-gray-400 text-sm">{t('planning.no_moves', 'No nearby surplus available to redistribute.')}</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {moves.map((m, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-sm bg-blue-50/60 rounded-lg px-3 py-2">
+                      <span className="text-blue-700 font-bold shrink-0">🩺 {m.doctors}</span>
+                      <span className="text-gray-700 truncate">
+                        <span className="font-medium">{m.from_facility}</span>
+                        <span className="text-gray-400"> ({m.from_district})</span>
+                        {' → '}
+                        <span className="font-medium">{m.to_facility}</span>
+                        <span className="text-gray-400"> ({m.to_district})</span>
+                      </span>
+                      <span className="ml-auto text-xs text-gray-400 shrink-0">{m.distance_km} km</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Section>
+
+          {/* 3) Beds requirement */}
+          <Section
+            title={t('planning.beds_title', 'Beds requirement')}
+            count={bedItems.length}
+            tone={bedItems.length ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}
+          >
+            {bedItems.length === 0 ? (
+              <p className="text-gray-400 text-sm p-2">{t('planning.no_bed_gap', 'No facilities near bed capacity.')}</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {bedItems.map((c) => (
+                  <div key={c.facility_id} className="border border-gray-200 rounded-xl p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-900">{c.facility}</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">{c.metric}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{c.detail}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{c.address || c.district}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        </div>
       )}
+    </div>
+  )
+}
+
+// Collapsible section — collapsed by default so the (often long) refill list
+// doesn't bury the doctor/bed sections. Header shows a count so the user knows
+// what's inside without expanding.
+function Section({ title, count, tone, subtitle, children }: {
+  title: string
+  count?: number
+  tone?: string
+  subtitle?: string
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 px-4 py-3 text-left"
+      >
+        <span className="text-gray-400 text-xs w-3">{open ? '▾' : '▸'}</span>
+        <span className="font-semibold text-gray-800">{title}</span>
+        {count != null && (
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${tone ?? 'bg-gray-100 text-gray-500'}`}>{count}</span>
+        )}
+        {subtitle && <span className="text-xs text-gray-400 ml-1">{subtitle}</span>}
+      </button>
+      {open && <div className="px-4 pb-4 border-t border-gray-100 pt-3">{children}</div>}
     </div>
   )
 }

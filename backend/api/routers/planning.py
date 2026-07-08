@@ -280,3 +280,99 @@ async def planning_capacity(
                 detail=f"~{opd} daily patients need ≈{needed} doctors; {docs} on roster.",
                 metric=f"{docs} doctors / {opd} OPD"))
     return out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Doctor redistribution — move surplus doctors to nearby short-staffed facilities
+# ─────────────────────────────────────────────────────────────────────────────
+
+DOCTOR_MOVE_MAX_KM = 50.0  # only propose moves between facilities within this range
+
+
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    from math import asin, cos, radians, sin, sqrt
+    dlat, dlng = radians(lat2 - lat1), radians(lng2 - lng1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    return 2 * 6371.0 * asin(sqrt(a))
+
+
+class DoctorMove(BaseModel):
+    from_facility: str
+    from_district: str
+    to_facility: str
+    to_district: str
+    to_address: str
+    doctors: int
+    distance_km: float
+
+
+@router.get("/doctor-redistribution", response_model=list[DoctorMove])
+async def planning_doctor_redistribution(
+    state_id: int | None = Query(None),
+    district_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(_field_plus),
+) -> list[DoctorMove]:
+    """Propose moving doctors from over-staffed facilities to nearby (< 50 km)
+    short-staffed ones within scope. Staffing need ≈ OPD load ÷ 50 patients/doctor;
+    surplus (roster − need ≥ 1) is matched greedily to the nearest shortage."""
+    where_sql, params = _resolve_scope(current_user, state_id, district_id)
+    rows = (
+        await db.execute(
+            sa_text(
+                f"""
+                WITH doc_ct AS (
+                    SELECT facility_id, count(*) AS n FROM doctors GROUP BY facility_id
+                )
+                SELECT f.id AS fid, f.name, f.address, d.name AS district,
+                       ST_Y(f.location) AS lat, ST_X(f.location) AS lng,
+                       COALESCE(snap.opd_count, 0) AS opd, COALESCE(dc.n, 0) AS doctors
+                FROM facilities f
+                JOIN districts d ON d.id = f.district_id
+                LEFT JOIN mv_facility_latest_snapshot snap ON snap.facility_id = f.id
+                LEFT JOIN doc_ct dc ON dc.facility_id = f.id
+                WHERE {where_sql} AND f.location IS NOT NULL
+                """
+            ),
+            params,
+        )
+    ).mappings().all()
+
+    surplus: list[dict] = []
+    shortage: list[dict] = []
+    for r in rows:
+        opd = int(r["opd"] or 0)
+        have = int(r["doctors"] or 0)
+        needed = math.ceil(opd / 50) if opd > 0 else 0
+        diff = have - needed
+        node = {
+            "name": r["name"], "district": r["district"], "address": r["address"] or "",
+            "lat": float(r["lat"]), "lng": float(r["lng"]),
+        }
+        if diff >= 1:
+            surplus.append({**node, "extra": diff})
+        elif diff <= -1:
+            shortage.append({**node, "deficit": -diff})
+
+    moves: list[DoctorMove] = []
+    shortage.sort(key=lambda x: -x["deficit"])
+    for sh in shortage:
+        while sh["deficit"] > 0:
+            best, best_km = None, None
+            for su in surplus:
+                if su["extra"] <= 0:
+                    continue
+                km = _haversine_km(sh["lat"], sh["lng"], su["lat"], su["lng"])
+                if km <= DOCTOR_MOVE_MAX_KM and (best_km is None or km < best_km):
+                    best, best_km = su, km
+            if best is None:
+                break
+            move = min(sh["deficit"], best["extra"])
+            moves.append(DoctorMove(
+                from_facility=best["name"], from_district=best["district"],
+                to_facility=sh["name"], to_district=sh["district"],
+                to_address=sh["address"], doctors=move, distance_km=round(best_km, 1),
+            ))
+            sh["deficit"] -= move
+            best["extra"] -= move
+    return moves

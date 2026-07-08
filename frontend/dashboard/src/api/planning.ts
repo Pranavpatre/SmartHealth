@@ -39,6 +39,16 @@ export interface CapacityItem {
   metric: string
 }
 
+export interface DoctorMove {
+  from_facility: string
+  from_district: string
+  to_facility: string
+  to_district: string
+  to_address: string
+  doctors: number
+  distance_km: number
+}
+
 type Scope = { state_id?: number; district_id?: number }
 
 export const getRefills = async (scope: Scope) => {
@@ -48,6 +58,11 @@ export const getRefills = async (scope: Scope) => {
 
 export const getCapacity = async (scope: Scope) => {
   const { data } = await apiClient.get<CapacityItem[]>('/planning/capacity', { params: scope })
+  return data
+}
+
+export const getDoctorRedistribution = async (scope: Scope) => {
+  const { data } = await apiClient.get<DoctorMove[]>('/planning/doctor-redistribution', { params: scope })
   return data
 }
 
